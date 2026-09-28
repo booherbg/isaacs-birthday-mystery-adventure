@@ -343,6 +343,7 @@ export class World {
       let img = S.idle;
       if (!p.onGround) img = S.jump;
       else if (moving) img = [S.walkA, S.idle, S.walkB, S.idle][Math.floor(p.anim / 1.6) % 4];
+      if (this.pack !== false) drawPack(x, y, f, p.anim);
       spr(img, x - 8, y - 24, f);
       return;
     }
@@ -363,6 +364,7 @@ export class World {
     if (this.mode === 'scooter') drawScooter(0, 0, f, p.anim);
     else if (this.mode === 'skate') drawBoard(0, 0, flipping ? p.flipT / 0.42 : 0, f);
     else drawBike(0, 0, f, p.anim);
+    if (this.pack !== false) drawPack(0, -lift + (this.mode === 'bike' ? -2 : 0), f, p.anim);
     let img = S.ride;
     if (this.mode === 'scooter' && p.onGround && Math.abs(p.vx) > 5 && Math.floor(p.anim / 3) % 3 === 0) img = S.kick;
     if (this.mode === 'bike') img = Math.floor(p.anim / 2) % 2 ? S.bike : S.bikeB;
@@ -423,4 +425,14 @@ export function drawWorm(x, y, t, flip = false) {
     const dx = flip ? x + w / 2 - c - 1 : x - w / 2 + c;
     G.drawImage(wormImg, col, 0, 1, h, Math.round(dx), Math.round(y - h - off), 1, h);
   }
+}
+
+// Green backpack with Big Bunny's ears poking out (drawn behind Isaac).
+export function drawPack(x, y, flip, anim = 0) {
+  const s = flip ? -1 : 1, bx = x - 7 * s - (flip ? 3 : 0);
+  const wob = Math.round(Math.sin(anim * 0.8)) ;
+  rect(bx - 1, y - 18, 5, 9, '#2a1f33'); rect(bx, y - 17, 3, 7, '#3f9b3a'); rect(bx, y - 13, 3, 1, '#2c7a34');
+  const ex = flip ? bx + 2 : bx;
+  rect(ex - 1, y - 24 + wob, 3, 7, '#2a1f33'); rect(ex, y - 23 + wob, 1, 6, '#f4efe6');
+  rect(ex + 2, y - 23, 3, 6, '#2a1f33'); rect(ex + 3, y - 22, 1, 5, '#f4efe6');
 }

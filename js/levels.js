@@ -87,6 +87,7 @@ const room = {
   bouncers: [[20, 104, 92, 250, 'bed']],
   setup(w) {
     w.bunny = { x: 58, y: 100, got: false };
+    w.pack = false;
     w.dog.x = 170; w.dog.pose = 'sit'; w.dog.stay = true;
     w.npc('mom', SPR.mom, 280, { face: -1, hidden: true });
     w.goal = 'Grab Big Bunny!';
@@ -125,7 +126,7 @@ const room = {
       spr(SPR.bunny, w.bunny.x - 4, w.bunny.y - 12 + Math.round(Math.sin(game.t * 3)));
       const p = w.p;
       if (Math.abs(p.x - w.bunny.x) < 12 && p.y < 112) {
-        w.bunny.got = true; audio.sfx('clue'); w.parts.sparkle(w.bunny.x, w.bunny.y - 6, 12);
+        w.bunny.got = true; w.pack = true; audio.sfx('clue'); w.parts.sparkle(w.bunny.x, w.bunny.y - 6, 12);
         toast(`${CONFIG.bunny} hopped into your backpack!`, 2600);
         w.pops.add('BIG BUNNY!', w.bunny.x, w.bunny.y - 20, '#fff');
       }
