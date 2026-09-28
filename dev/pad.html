@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller Test</title>
+<style>
+  body { margin: 0; background: #1c1238; color: #fff; font: 16px/1.4 ui-rounded, system-ui, sans-serif; padding: 20px; }
+  h1 { margin: 0 0 6px; font-size: 22px; } .muted { opacity: .7; }
+  .box { background: #2a1f4a; border-radius: 12px; padding: 14px; margin: 12px 0; }
+  #prompt { font-size: 28px; font-weight: 800; color: #ffde5c; margin: 8px 0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .b { width: 44px; height: 44px; border-radius: 8px; background: #3b2f5e; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .b.on { background: #ffde5c; color: #2a1f33; }
+  .ax { display: grid; grid-template-columns: 60px 1fr 60px; gap: 8px; align-items: center; margin: 3px 0; }
+  .bar { height: 12px; background: #3b2f5e; border-radius: 6px; position: relative; }
+  .bar i { position: absolute; top: 0; bottom: 0; background: #7ee07a; border-radius: 6px; }
+  .game span { display: inline-block; padding: 6px 12px; margin: 3px; border-radius: 8px; background: #3b2f5e; font-weight: 700; }
+  .game span.on { background: #7ee07a; color: #1c1238; }
+  textarea { width: 100%; height: 180px; background: #120b26; color: #9fe35f; border: 0; border-radius: 8px; padding: 10px; font: 13px ui-monospace, monospace; box-sizing: border-box; }
+  button { font: inherit; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 0; background: #ffde5c; color: #2a1f33; cursor: pointer; margin-right: 8px; }
+</style>
+</head>
+<body>
+<h1>🎮 Controller Test</h1>
+<div class="muted">Plug in the controller, then press any button so the browser can see it. Follow the yellow prompt. When it's done, hit "Copy report" and paste it to Claude.</div>
+<div class="box"><div id="info">No controller detected yet. Press a button on it.</div><div id="prompt"></div><div id="progress" class="muted"></div></div>
+<div class="box"><b>What the game sees</b> (these should light up correctly)<div class="game" id="game"></div></div>
+<div class="box"><b>Raw buttons</b><div class="grid" id="btns"></div><b style="display:block;margin-top:10px">Raw axes</b><div id="axes"></div></div>
+<div class="box"><textarea id="report" readonly></textarea><div style="margin-top:8px"><button id="copy">Copy report</button><button id="restart">Restart test</button></div></div>
+<script type="module">
+import { input, pollInput } from '../js/input.js';
+
+const STEPS = ['D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT', 'BOTTOM face button (✕)', 'RIGHT face button (◯)', 'LEFT face button (◻)', 'TOP face button (△)', 'START', 'SELECT', 'L1 (front left shoulder)', 'R1 (front right shoulder)'];
+const EXPECT = { 'D-PAD UP': 'up', 'D-PAD DOWN': 'down', 'D-PAD LEFT': 'left', 'D-PAD RIGHT': 'right', 'BOTTOM face button (✕)': 'a', 'RIGHT face button (◯)': 'a', 'LEFT face button (◻)': 'b', 'TOP face button (△)': 'b', START: 'start' };
+let step = 0, rest = null, results = [], waitRelease = false;
+const $ = (s) => document.getElementById(s);
+
+function snapshot(gp) { return { b: gp.buttons.map((b) => b.pressed || b.value > 0.5), a: [...gp.axes] }; }
+function diff(gp) {
+  const s = snapshot(gp), out = [];
+  s.b.forEach((p, i) => { if (p && !rest.b[i]) out.push(`button ${i}`); });
+  s.a.forEach((v, i) => { if (Math.abs(v - rest.a[i]) > 0.3) out.push(`axis ${i} = ${v.toFixed(3)} (rest ${rest.a[i].toFixed(3)})`); });
+  return out;
+}
+function frame() {
+  pollInput();
+  const gp = [...(navigator.getGamepads?.() || [])].find((g) => g && g.connected);
+  $('game').innerHTML = ['left', 'right', 'up', 'down', 'a', 'b', 'start'].map((k) => `<span class="${input[k] ? 'on' : ''}">${k === 'a' ? 'A (jump/flip)' : k === 'b' ? 'B (spin)' : k.toUpperCase()}</span>`).join('');
+  if (gp) {
+    $('info').innerHTML = `<b>${gp.id}</b><br>mapping: <b>${gp.mapping || '(none / non-standard)'}</b> · ${gp.buttons.length} buttons · ${gp.axes.length} axes`;
+    $('btns').innerHTML = gp.buttons.map((b, i) => `<div class="b ${b.pressed || b.value > 0.5 ? 'on' : ''}">${i}</div>`).join('');
+    $('axes').innerHTML = gp.axes.map((v, i) => `<div class="ax"><span>axis ${i}</span><div class="bar"><i style="left:${50 + Math.min(0, v) * 50}%;width:${Math.abs(v) * 50}%"></i></div><span>${v.toFixed(2)}</span></div>`).join('');
+    if (!rest) rest = snapshot(gp);
+    if (step < STEPS.length) {
+      $('prompt').textContent = waitRelease ? 'Let go…' : `Press: ${STEPS[step]}`;
+      $('progress').textContent = `Step ${step + 1} of ${STEPS.length}`;
+      const d = diff(gp);
+      if (waitRelease) { if (!d.length) waitRelease = false; }
+      else if (d.length) {
+        const exp = EXPECT[STEPS[step]];
+        const ok = exp ? (input[exp] ? `game read ${exp.toUpperCase()} ✓` : `game did NOT read ${exp.toUpperCase()} ✗`) : '';
+        results.push(`${STEPS[step].padEnd(28)} → ${d.join(', ')}  ${ok}`);
+        step++; waitRelease = true;
+        render();
+      }
+    } else { $('prompt').textContent = 'All done! Copy the report below 👇'; $('progress').textContent = ''; }
+  }
+  requestAnimationFrame(frame);
+}
+function render() {
+  const gp = [...(navigator.getGamepads?.() || [])].find((g) => g && g.connected);
+  $('report').value = [`id: ${gp?.id}`, `mapping: ${gp?.mapping || 'non-standard'}`, `buttons: ${gp?.buttons.length}  axes: ${gp?.axes.length}`, `rest axes: ${rest?.a.map((v) => v.toFixed(3)).join(', ')}`, '', ...results].join('\n');
+}
+$('copy').onclick = async () => { render(); try { await navigator.clipboard.writeText($('report').value); $('copy').textContent = 'Copied!'; } catch { $('report').select(); document.execCommand('copy'); $('copy').textContent = 'Copied!'; } };
+$('restart').onclick = () => { step = 0; results = []; rest = null; waitRelease = false; $('copy').textContent = 'Copy report'; render(); };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
