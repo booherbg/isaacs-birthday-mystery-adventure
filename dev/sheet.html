@@ -1,0 +1,21 @@
+<!doctype html><html><body style="margin:0;background:#8fb8e8">
+<canvas id="screen" width="256" height="144" style="display:none"></canvas>
+<canvas id="c" width="900" height="700" style="image-rendering:pixelated"></canvas>
+<script type="module">
+import { buildSprites, SPR, PORTRAIT } from '../js/sprites.js';
+buildSprites();
+const c = document.getElementById('c'), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+let x = 8, y = 8, rowH = 0; const S = 4;
+function put(img, label) {
+  if (x + img.width * S > 890) { x = 8; y += rowH + 14; rowH = 0; }
+  g.drawImage(img, x, y, img.width * S, img.height * S);
+  g.fillStyle = '#000'; g.font = '10px monospace'; g.fillText(label, x, y + img.height * S + 10);
+  x += Math.max(img.width * S, label.length * 6) + 10; rowH = Math.max(rowH, img.height * S);
+}
+for (const [grp, v] of Object.entries(SPR)) {
+  if (v instanceof HTMLCanvasElement) put(v, grp); else for (const [k, img] of Object.entries(v)) put(img, grp + '.' + k);
+}
+x = 8; y += rowH + 20; rowH = 0;
+for (const [k, img] of Object.entries(PORTRAIT)) put(img, 'p.' + k);
+document.title = 'ready';
+</script></body></html>

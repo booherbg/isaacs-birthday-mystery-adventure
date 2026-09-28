@@ -31,16 +31,17 @@
 <script type="module">
 import { input, pollInput } from '../js/input.js';
 
-const STEPS = ['D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT', 'BOTTOM face button (✕)', 'RIGHT face button (◯)', 'LEFT face button (◻)', 'TOP face button (△)', 'START', 'SELECT', 'L1 (front left shoulder)', 'R1 (front right shoulder)'];
-const EXPECT = { 'D-PAD UP': 'up', 'D-PAD DOWN': 'down', 'D-PAD LEFT': 'left', 'D-PAD RIGHT': 'right', 'BOTTOM face button (✕)': 'a', 'RIGHT face button (◯)': 'a', 'LEFT face button (◻)': 'b', 'TOP face button (△)': 'b', START: 'start' };
+const STEPS = ['D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT', 'BOTTOM button (printed 2)', 'RIGHT button (printed 3)', 'LEFT button (printed 1)', 'TOP button (printed 4)', 'START', 'SELECT', 'front LEFT shoulder', 'front RIGHT shoulder', 'back LEFT shoulder', 'back RIGHT shoulder'];
+const EXPECT = { 'D-PAD UP': 'up', 'D-PAD DOWN': 'down', 'D-PAD LEFT': 'left', 'D-PAD RIGHT': 'right', 'BOTTOM button (printed 2)': 'a', 'RIGHT button (printed 3)': 'a', 'LEFT button (printed 1)': 'b', 'TOP button (printed 4)': 'b', START: 'start', 'front LEFT shoulder': 'b', 'front RIGHT shoulder': 'b', 'back LEFT shoulder': 'b', 'back RIGHT shoulder': 'b' };
 let step = 0, rest = null, results = [], waitRelease = false;
 const $ = (s) => document.getElementById(s);
 
-function snapshot(gp) { return { b: gp.buttons.map((b) => b.pressed || b.value > 0.5), a: [...gp.axes] }; }
+function snapshot(gp) { return { b: gp.buttons.map(() => false), a: [...gp.axes] }; }
+const anyHeld = (gp) => gp.buttons.some((b) => b.pressed || b.value > 0.5);
 function diff(gp) {
-  const s = snapshot(gp), out = [];
-  s.b.forEach((p, i) => { if (p && !rest.b[i]) out.push(`button ${i}`); });
-  s.a.forEach((v, i) => { if (Math.abs(v - rest.a[i]) > 0.3) out.push(`axis ${i} = ${v.toFixed(3)} (rest ${rest.a[i].toFixed(3)})`); });
+  const out = [];
+  gp.buttons.forEach((b, i) => { if (b.pressed || b.value > 0.5) out.push(`button ${i}`); });
+  gp.axes.forEach((v, i) => { if (Math.abs(v - rest.a[i]) > 0.3) out.push(`axis ${i} = ${v.toFixed(3)} (rest ${rest.a[i].toFixed(3)})`); });
   return out;
 }
 function frame() {
@@ -51,7 +52,7 @@ function frame() {
     $('info').innerHTML = `<b>${gp.id}</b><br>mapping: <b>${gp.mapping || '(none / non-standard)'}</b> · ${gp.buttons.length} buttons · ${gp.axes.length} axes`;
     $('btns').innerHTML = gp.buttons.map((b, i) => `<div class="b ${b.pressed || b.value > 0.5 ? 'on' : ''}">${i}</div>`).join('');
     $('axes').innerHTML = gp.axes.map((v, i) => `<div class="ax"><span>axis ${i}</span><div class="bar"><i style="left:${50 + Math.min(0, v) * 50}%;width:${Math.abs(v) * 50}%"></i></div><span>${v.toFixed(2)}</span></div>`).join('');
-    if (!rest) rest = snapshot(gp);
+    if (!rest) { if (anyHeld(gp)) { $('prompt').textContent = 'Let go of all buttons…'; requestAnimationFrame(frame); return; } rest = snapshot(gp); }
     if (step < STEPS.length) {
       $('prompt').textContent = waitRelease ? 'Let go…' : `Press: ${STEPS[step]}`;
       $('progress').textContent = `Step ${step + 1} of ${STEPS.length}`;

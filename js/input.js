@@ -93,13 +93,14 @@ function pollPads() {
     if (gp.mapping === 'standard') {
       l ||= btn(14); r ||= btn(15); u ||= btn(12); d ||= btn(13);
       if (btn(0) || btn(3)) pad.a = true;
-      if (btn(1) || btn(2)) pad.b = true;
+      if (btn(1) || btn(2) || btn(4) || btn(5) || btn(6) || btn(7)) pad.b = true;
       if (btn(9)) pad.start = true;
     } else {
       // Generic USB pads: face buttons 0-3 (which is "A" varies by brand; any works), start 9, hat on axis 9.
+      // e.g. Logitech Precision: 0-3 = printed 1 (left) 2 (bottom) 3 (right) 4 (top), 4-7 shoulders, 8 select, 9 start
       if (btn(1) || btn(2)) pad.a = true;
-      if (btn(0) || btn(3)) pad.b = true;
-      if (btn(9) || btn(7)) pad.start = true;
+      if (btn(0) || btn(3) || btn(4) || btn(5) || btn(6) || btn(7)) pad.b = true;
+      if (btn(9)) pad.start = true;
       const hat = gp.axes[9];
       if (hat !== undefined && Math.abs(hat) <= 1.05) {
         const [hx, hy] = HAT[Math.round(((hat + 1) * 7) / 2) & 7];
