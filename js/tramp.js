@@ -10,9 +10,9 @@ import { CONFIG } from './config.js';
 import { save } from './save.js';
 
 const K = CONFIG.kid.toUpperCase();
-const GROUND = 124, MAT = GROUND - 20, CX = 128, HALF = 40;
+const GROUND = 124, MAT = GROUND - 20, CX = 128, HALF = 56;
 const GRAV = 520;
-const HEIGHTS = [0, 42, 66, 100, 145, 205, 285, 385, 510, 670, 880];
+const HEIGHTS = [0, 60, 88, 125, 175, 240, 320, 425, 555, 715, 900];
 const MAXP = 10;
 const FLIP_T = 0.52, SPIN_T = 0.42;
 
@@ -25,6 +25,7 @@ export const HATS = [
   { id: 'pup', name: 'Pup Fire Helmet', need: 'Hit a x8 combo', test: (r) => r.combo >= 8 },
   { id: 'diamond', name: 'Diamond Helmet', need: 'Score 4,000', test: (r) => r.score >= 4000 },
   { id: 'crown', name: 'Space Crown', need: 'Bounce to SPACE', test: (r) => r.height >= 800 },
+  { id: 'collector', name: 'Card Collector Cap', need: 'Fill the Card Binder (story mode)' },
 ];
 
 const ITEMS = [
@@ -37,8 +38,8 @@ export function trampolineScene({ story = false, timed = true } = {}) {
   const S = {
     name: 'tramp', story, timed: T !== Infinity,
     parts: new Particles(), pops: new Pops(),
-    p: { x: CX, y: MAT - 1, vx: 0, vy: -Math.sqrt(2 * GRAV * HEIGHTS[2]), rot: 0, flipDir: 1, flips: [], flipT: 0, spinT: 0, spins: 0, worm: false, contact: 0, daze: 0, face: 1, sink: 0, landWorm: 0 },
-    power: 2, combo: 0, score: 0, time: T, items: [], camY: 0, lastA: -9, best: '', bestHeight: 0, bestCombo: 0, tricksDone: 0,
+    p: { x: CX, y: MAT - 1, vx: 0, vy: -Math.sqrt(2 * GRAV * HEIGHTS[3]), rot: 0, flipDir: 1, flips: [], flipT: 0, spinT: 0, spins: 0, worm: false, contact: 0, daze: 0, face: 1, sink: 0, landWorm: 0 },
+    power: 3, combo: 0, score: 0, time: T, items: [], camY: 0, lastA: -9, best: '', bestHeight: 0, bestCombo: 0, tricksDone: 0,
     milestones: {}, over: false, fans: 0, plane: -400, ufo: -300, tutorial: story ? 0 : -1, sunny: { x: 60, vx: 0, face: 1, hop: 0, y: GROUND },
     enter() {
       audio.play('bounce');
@@ -73,7 +74,7 @@ export function trampolineScene({ story = false, timed = true } = {}) {
 
       if (p.daze > 0) {
         p.daze -= dt;
-        if (p.daze <= 0) { p.x = CX - 20; p.y = MAT - 1; p.vy = -Math.sqrt(2 * GRAV * HEIGHTS[2]); p.vx = 1.5 * 20; audio.sfx('jump'); }
+        if (p.daze <= 0) { p.x = CX - 20; p.y = MAT - 1; p.vy = -Math.sqrt(2 * GRAV * HEIGHTS[3]); p.vx = 30; audio.sfx('jump'); }
         this.updateSunny(dt); this.updateCam(dt); this.updateItems(dt);
         return;
       }
@@ -87,11 +88,11 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         // steering + gentle assist toward the middle
         const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
         if (dir) { p.vx = clamp(p.vx + dir * 300 * dt, -115, 115); p.face = dir; }
-        else p.vx += clamp((CX - p.x) * 0.9, -40, 40) * dt;
+        else p.vx += clamp((CX - p.x) * 2.2, -90, 90) * dt;
         p.vx *= 1 - 0.6 * dt;
         // tricks (not in the landing window)
         const tLand = this.timeToMat();
-        const nearLand = p.vy > 0 && tLand < 0.16;
+        const nearLand = p.vy > 0 && tLand < 0.2;
         if (!nearLand) {
           if (input.aPressed || input.tapPressed) {
             if (p.flips.length < 6) {
@@ -133,14 +134,14 @@ export function trampolineScene({ story = false, timed = true } = {}) {
     },
     land() {
       const p = this.p;
-      p.y = MAT; p.contact = 0.11; p.perfect = game.t - this.lastA < 0.17;
+      p.y = MAT; p.contact = 0.12; p.perfect = game.t - this.lastA < 0.22;
       p.sink = Math.min(9, 3 + p.vy / 90);
       const rotOff = Math.abs(((p.rot % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
       const bonk = p.flipT > 0.1 || p.spinT > 0.1 || (p.flipT > 0 && rotOff < 2.3);
       if (bonk && (p.flips.length || p.spins)) {
         audio.sfx('bonk');
         this.pops.add(pick(['BONK!', 'WOBBLE!', 'OOPSIE!']), p.x, p.y - 34, '#ff8a80');
-        this.combo = 0; this.power = Math.max(1, this.power - 2); p.bonked = true; game.shake = 2;
+        this.combo = 0; this.power = Math.max(3, this.power - 2); p.bonked = true; game.shake = 2;
       } else if (p.flips.length || p.spins || p.worm) {
         const { name, pts } = trickName(p);
         this.combo = Math.min(8, this.combo + 1);
@@ -156,7 +157,7 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         if (p.worm) { p.landWorm = 0.5; }
       }
       p.flips = []; p.flipT = 0; p.rot = 0; p.spins = 0; p.spinT = 0; p.worm = false;
-      p.vx *= 0.55;
+      p.vx *= 0.4;
     },
     launch() {
       const p = this.p;
@@ -166,7 +167,7 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         this.pops.add('PERFECT!', p.x, p.y - 26, '#9fe35f');
         audio.sfx('perfect', { combo: this.power });
         this.fans = 1;
-      } else if (!p.bonked) this.power = Math.max(2, this.power - 1);
+      } else if (!p.bonked) this.power = Math.max(3, this.power - 1);
       p.bonked = false; p.perfect = false;
       p.vy = -Math.sqrt(2 * GRAV * HEIGHTS[this.power]);
       audio.sfx('boing', { p: this.power });
@@ -176,14 +177,14 @@ export function trampolineScene({ story = false, timed = true } = {}) {
     oof() {
       const p = this.p;
       p.y = GROUND; p.vy = 0; p.vx = 0; p.daze = 1.3; p.flips = []; p.flipT = 0; p.rot = 0; p.spins = 0; p.spinT = 0; p.worm = false;
-      this.combo = 0; this.power = 2;
+      this.combo = 0; this.power = 3;
       audio.sfx('oof'); game.shake = 3;
       this.pops.add('OOF!', p.x, p.y - 30, '#ff8a80');
       this.sunny.target = p.x;
       setTimeout(() => audio.sfx('bark', { n: 2 }), 300);
     },
     checkMilestones(alt) {
-      const M = [[150, 'TREETOPS!'], [385, 'CLOUDS!'], [620, 'AIRPLANE ZONE!'], [800, 'OUTER SPACE!!!']];
+      const M = [[150, 'TREETOPS!'], [385, 'SKY ZONE!'], [620, 'AIRPLANE ZONE!'], [800, 'OUTER SPACE!!!']];
       for (const [h, name] of M) if (alt >= h && !this.milestones[h]) { this.milestones[h] = 1; banner(name, 1300); audio.sfx('unlock'); if (h === 800) { this.parts.confetti(this.p.x, this.p.y, 30); } }
     },
     updateItems(dt) {
@@ -194,7 +195,7 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         const it = pick(opts);
         const alt = rand(Math.max(24, it.min), Math.max(it.min + 40, reach));
         const star = alt > 520 && Math.random() < 0.25;
-        this.items.push({ k: star ? 'star' : it.k, pts: star ? 100 : it.pts, gold: star, x: rand(CX - 70, CX + 70), y: MAT - alt, t: 0, vx: rand(-6, 6) });
+        this.items.push({ k: star ? 'star' : it.k, pts: star ? 100 : it.pts, gold: star, x: rand(CX - 90, CX + 90), y: MAT - alt, t: 0, vx: rand(-6, 6) });
       }
       for (let i = this.items.length - 1; i >= 0; i--) {
         const it = this.items[i];
@@ -298,6 +299,7 @@ function renderTramp(S) {
   spr(cheer ? SPR.mom.wave : SPR.mom.idle, 14, GROUND - 32 - (cheer ? 3 : 0));
   spr(cheer ? SPR.dad.cheer : SPR.dad.idle, 32, GROUND - 32 - (cheer ? 3 : 0), false);
   spr(SPR.freida.loaf, 190, GROUND - 6 - 26 - 12);
+  spr(SPR.bunny, 52, GROUND - 13);
   rect(0, GROUND, W, H + 300, '#62b34f');
   for (let x = 0; x < W; x += 8) rect(x + 3, GROUND + 2 + (x & 2), 1, 2, '#4ca83c');
   A.trampoline(CX, GROUND, HALF * 2 + 4, p.contact > 0 ? p.sink : 0);
@@ -353,6 +355,7 @@ export function drawHat(id, g = G) {
   if (id === 'diamond') { r(-7, -14, 14, 7, '#5cd6ff'); r(-7, -14, 14, 1, '#d4f6ff'); r(-7, -7, 2, 5, '#5cd6ff'); r(5, -7, 2, 5, '#5cd6ff'); r(-4, -12, 2, 2, '#d4f6ff'); r(2, -11, 2, 2, '#2aa6d6'); }
   if (id === 'pup') { r(-7, -15, 14, 6, '#e8483f'); r(-8, -10, 16, 2, '#c0302a'); r(-2, -14, 4, 4, '#ffde5c'); r(-1, -13, 2, 2, '#e8483f'); }
   if (id === 'bunny') { r(-5, -26, 3, 14, '#ffffff'); r(-4, -24, 1, 10, '#ff9eaa'); r(2, -27, 3, 15, '#ffffff'); r(3, -25, 1, 11, '#ff9eaa'); r(-3, -26, 1, 1, '#9aa3b8'); }
+  if (id === 'collector') { const c = ['#ff7d98', '#ffde5c', '#8fe8ff', '#9fe35f']; for (let i = 0; i < 11; i++) r(-6 + i, -15 + (i < 1 || i > 9 ? 1 : 0), 1, 5, c[(i + Math.floor(Date.now() / 150)) % 4]); r(4, -11, 5, 2, '#ffcd3c'); r(-1, -14, 2, 2, '#fff'); }
   if (id === 'crown') { r(-5, -16, 11, 5, '#ffcd3c'); r(-5, -19, 2, 3, '#ffcd3c'); r(0, -20, 2, 4, '#ffcd3c'); r(4, -19, 2, 3, '#ffcd3c'); r(0, -15, 2, 2, '#e8483f'); r(-4, -14, 1, 1, '#5cd6ff'); r(4, -14, 1, 1, '#5cd6ff'); }
 }
 

@@ -1,9 +1,9 @@
-// Sandlot batting with Dad (Wii Sports vibes). No way to fail: pitches get slower and easier.
+// Batting with Dad at Brunsdale Fields (Wii Sports vibes). No way to fail: pitches get slower and easier.
 import { W, H, G, game, rect, circle, ellipse, spr, sprRot, pixelText, textWidth, wait, until, Particles, Pops, rand, pick, CONFETTI } from './engine.js';
 import { SPR } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { say, choose, clueCard, banner, hud, setPad, toast } from './ui.js';
+import { say, choose, clueCard, banner, hud, setPad, toast, wormBanner } from './ui.js';
 import { drawWorm } from './world.js';
 import * as A from './art.js';
 import { CONFIG } from './config.js';
@@ -101,17 +101,16 @@ export function battingScene() {
       audio.sfx('pop'); this.parts.confetti(130, 96, 50);
       await say('dad', 'WHAT A HIT!!! That ball went all the way to the MOON and back!');
       await say('dad', "Look — it split open! There's something inside...");
-      await clueCard(2, "It's BOUNCY!");
-      save.data.clues = Math.max(save.data.clues || 0, 2); save.flush();
-      this.worm = 0.01; audio.sfx('worm'); this.pops.add('THE WORM!', 60, 56, '#ffde5c');
-      await wait(1.6); this.worm = 0;
+      await clueCard(2);
+      this.worm = 0.01; audio.sfx('worm'); wormBanner();
+      await wait(2.4); this.worm = 0;
       await say('isaac', "Big AND bouncy?! What could it BE?!");
       const done = save.data.paths || {};
       const c = await choose('dad', 'Two ways to the new house from here. Which way, buddy?', [
         `🛹 DIKE EAST SKATE PARK${done.skate ? ' ✓' : ''}`,
         `🚲 RED RIVER TRAIL${done.river ? ' ✓' : ''}`,
       ]);
-      await say('dad', c === 0 ? "The skate park! I heard some CREEPERS hang out there... go show 'em your tricks!" : "The river trail! Mom's fishing down there. Say hi for me!");
+      await say('dad', c === 0 ? "The skate park! I brought your SKATEBOARD. Mom's judging the Creeper contest — go show 'em!" : "The river trail! Take your BIKE — Mom's bird watching at LION'S PARK, and she brought your fishing rod!");
       goStage(c === 0 ? 'skate' : 'river');
     },
     render() {
@@ -127,7 +126,10 @@ export function battingScene() {
       ellipse(212, GROUND + 1, 26, 4, '#b8804a');
       rect(70, GROUND, 12, 2, '#fff');
       // Sunny + Freida spectating
-      spr(SPR.sunny.sit, 130, GROUND - 14, true);
+      G.save(); G.translate(150, GROUND); G.scale(2, 2); spr(SPR.sunny.sit, -10, -16, true); G.restore();
+      // his skateboard + bike leaning on the fence, ready for the next leg
+      rect(236, 70, 3, 22, '#2a1f33'); rect(236, 71, 2, 20, '#e8752a');
+      G.strokeStyle = '#2a1f33'; G.lineWidth = 1; for (const bx of [6, 24]) { G.beginPath(); G.arc(bx, 86, 7, 0, Math.PI * 2); G.stroke(); } rect(6, 79, 18, 2, '#4cb944'); rect(20, 74, 2, 6, '#2a1f33');
       spr(SPR.freida.loaf, 150, 80 - 12);
       // sweet spot
       if (this.state === 'pitch' && this.ball && !this.ball.hit) {

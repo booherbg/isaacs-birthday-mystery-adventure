@@ -3,12 +3,12 @@ import { W, H, G, game, rect, circle, spr, sprRot, setScene, fadeTo, offscreen, 
 import { SPR, PORTRAIT } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { overlay, menu, hud, setPad, toast, closeOverlay } from './ui.js';
+import { overlay, menu, hud, setPad, toast, closeOverlay, clueBook } from './ui.js';
 import * as A from './art.js';
 import { CONFIG } from './config.js';
 import { save } from './save.js';
 import { goStage, STAGES, STAGE_NAMES } from './levels.js';
-import { trampolineScene, hatPicker, drawHat } from './tramp.js';
+import { trampolineScene, hatPicker, drawHat, HATS } from './tramp.js';
 
 export function titleScene() {
   const S = {
@@ -46,7 +46,7 @@ export function titleScene() {
       const t = save.data.tramp;
       const v = await menu({
         title: 'TRAMPOLINE TIME',
-        sub: `High score: ${t.high} · Hats: ${t.hats.length - 1}/${8 - 1}`,
+        sub: `High score: ${t.high} · Hats: ${t.hats.length - 1}/${HATS.length - 1}`,
         body: `<p style="font-size:14px;margin:4px 0">Tap <b>FLIP</b> as you land to bounce higher · <b>FLIP</b> in the air = backflip · hold ◀▶ + FLIP = front flip · <b>SPIN</b> = 360 · <b>▼</b> = the worm</p>`,
         buttons: [{ v: 'timed', label: '⏱ 60-SECOND CHALLENGE', cls: 'go' }, { v: 'free', label: '∞ FREE BOUNCE<span class="note">No timer, just fun</span>' }, { v: 'hat', label: '🎩 Pick a hat' }, { v: 'back', label: '← Back' }],
       });
@@ -111,11 +111,12 @@ export async function pauseMenu() {
   const inGame = game.scene && game.scene.name !== 'title';
   const v = await menu({
     title: 'PAUSED',
-    buttons: [{ v: 'resume', label: '▶ Keep playing', cls: 'go' }, { v: 'sound', label: audio.muted ? '♪ Sound: OFF' : '♪ Sound: ON' }, ...(inGame ? [{ v: 'title', label: '⌂ Main menu' }] : [])],
+    buttons: [{ v: 'resume', label: '▶ Keep playing', cls: 'go' }, ...(inGame && game.scene.name !== 'tramp' ? [{ v: 'clues', label: '📜 Clue book' }] : []), { v: 'sound', label: audio.muted ? '♪ Sound: OFF' : '♪ Sound: ON' }, ...(inGame ? [{ v: 'title', label: '⌂ Main menu' }] : [])],
   });
   game.paused = false;
   if (v === 'sound') { audio.setMuted(!audio.muted); document.getElementById('btn-mute').classList.toggle('off', audio.muted); return pauseMenu(); }
   if (v === 'title') fadeTo(() => setScene(titleScene()));
+  if (v === 'clues') { game.paused = true; await clueBook(); game.paused = false; }
 }
 
 // ---------------- birthday card ----------------
@@ -135,8 +136,10 @@ export async function birthdayCard() {
   const url = pic.toDataURL();
   await menu({
     title: CONFIG.cardTitle, cls: 'bday',
-    body: `<img src="${url}" alt="" style="width:100%;max-width:400px;image-rendering:pixelated;border-radius:10px;border:3px solid #2a1f33">
-      ${CONFIG.cardBody.map((p) => `<p>${p}</p>`).join('')}<p class="sign">${CONFIG.cardSign}</p>`,
+    body: `<div class="bday-grid"><img src="${url}" alt="">
+      <div class="bday-text">${CONFIG.cardBody.map((p) => `<p>${p}</p>`).join('')}
+      ${(save.data.binder || []).length ? `<p>🃏 You collected <b>${save.data.binder.length} of 12</b> trading cards!</p>` : ''}
+      <p class="sign">${CONFIG.cardSign}</p></div></div>`,
     buttons: [{ v: 'ok', label: '🎉 YAY! 🎉', cls: 'go' }],
   });
 }

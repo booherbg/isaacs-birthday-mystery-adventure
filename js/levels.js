@@ -4,7 +4,7 @@ import { World, drawWorm } from './world.js';
 import { SPR } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { say, choose, clueCard, banner, toast, hud, icon, setPad, ui } from './ui.js';
+import { say, choose, clueCard, banner, toast, hud, icon, setPad, ui, wormBanner, tip } from './ui.js';
 import { CONFIG } from './config.js';
 import { save } from './save.js';
 import * as A from './art.js';
@@ -47,26 +47,32 @@ function levelScene(def) {
       hud(l, c, r);
     },
     render() { w.render(); },
+    exit() { tip(''); def.exit?.(w); },
   };
 }
 function defaultHud(w) {
-  return [w.items.length ? `${icon(w.itemKind)} ${w.got}/${w.items.length}` : '', w.goal || '', ''];
+  return [w.items.length ? `${icon(w.itemKind)} ${w.itemKind === 'card' ? 'CARDS' : 'GEMS'} ${w.got}/${w.items.length}` : '', w.goal || '', ''];
 }
 
 // Isaac's victory dance: THE WORM.
-async function theWorm(w, secs = 1.6) {
+function cardTally(w) {
+  if (!w.items.length) return;
+  const gems = w.itemKind !== 'card';
+  toast(`${gems ? '💎' : '🃏'} You found ${w.got}/${w.items.length} ${gems ? 'diamonds' : 'cards'}!${w.got === w.items.length ? ' FULL SET!' : ''}`, 2800);
+}
+export async function theWorm(w, secs = 2.4) {
   const p = w.p;
+  if (!save.data.wormIntro) { save.data.wormIntro = 1; save.flush(); await say('isaac', 'Time for my VICTORY DANCE... THE WORM!!!'); }
   p.pose = 'worm'; p.wormT = 0;
-  audio.sfx('worm');
-  w.pops.add('THE WORM!', p.x, p.y - 30, '#ffde5c');
+  audio.sfx('worm'); setTimeout(() => audio.sfx('worm'), 700); setTimeout(() => audio.sfx('win'), 1400);
+  wormBanner();
   const t0 = game.t;
   await until(() => game.t - t0 > secs);
   p.pose = null;
 }
 
-async function clue(w, n, text) {
-  await clueCard(n, text);
-  save.data.clues = Math.max(save.data.clues || 0, n); save.flush();
+async function clue(w, n) {
+  await clueCard(n);
   await theWorm(w);
 }
 
@@ -83,8 +89,12 @@ function grassGround(cx, w, top = '#5cbf4a', dirt = '#8a5a3a') {
 const room = {
   id: 'room', title: "BIRTHDAY MORNING!", sub: 'Isaac turns 8 today!', music: 'title',
   width: 256, ground: 124, startX: 120, item: 'card',
-  solids: [[146, 18, 16]],
   bouncers: [[20, 104, 92, 250, 'bed']],
+  inter: [
+    { x: 154, y: 96, r: 10, label: 'PLAY ♪', fn: playTonie },
+    { x: 177, y: 34, r: 12, label: 'THWIP!', fn: thwip },
+    { x: 222, px: 234, y: 84, r: 12, label: 'SWING', fn: batterUp },
+  ],
   setup(w) {
     w.bunny = { x: 58, y: 100, got: false };
     w.pack = false;
@@ -131,7 +141,8 @@ const room = {
         w.pops.add('BIG BUNNY!', w.bunny.x, w.bunny.y - 20, '#fff');
       }
     }
-    if (w.p.bounced && w.bedQuip) { w.bedQuip = false; say('mom', "No jumping on the bed! ...Save the bouncing for later. 😉"); }
+    roomToys(w, cx);
+    if (w.p.bounced && w.bedQuip) { w.bedQuip = false; say('mom', "I know how much you LOVE to bounce... but let's not jump on the bed, please!"); }
   },
   bg(cx, cy, w) {
     // wall
@@ -179,6 +190,56 @@ const room = {
     if (Math.abs(w.p.x - 155) < 20 && game.frame % 50 < 25) pixelText('♥', 152, 88, '#ff7d98');
   },
 };
+// ---- hidden fun in Isaac's room ----
+const TONIE = [['tonie1', 'TWINKLE TWINKLE'], ['tonie2', "SUNNY'S BARK SONG"], ['tonie3', 'BALL GAME BOOGIE']];
+function playTonie(w, it) {
+  const [song, name] = TONIE[(it.uses - 1) % TONIE.length];
+  w.tonie = { until: game.t + 7, next: 0 };
+  w.pops.add(name, 155, 84, '#ffde5c', 1, 1.6);
+  audio.play(song, () => { if (game.scene?.name === 'room') audio.play('title'); w.tonie = null; });
+  if (song === 'tonie2') for (let i = 1; i <= 4; i++) setTimeout(() => { if (w.tonie) { audio.sfx('bark', { n: 1 }); w.pops.add('ARF!', w.dog.x, w.dog.y - 18, '#fff'); } }, i * 1714 - 300);
+}
+function thwip(w) {
+  const p = w.p;
+  w.web = { x: p.x + 4 * p.face, t: game.t };
+  p.vy = -390; p.onGround = false;
+  audio.sfx('whoosh'); audio.sfx('flip');
+  w.pops.add('THWIP!', p.x, p.y - 30, '#ff5d73');
+}
+function batterUp(w) {
+  const p = w.p;
+  p.pose = 'back'; setTimeout(() => (p.pose = null), 250);
+  audio.sfx('crack');
+  w.pops.add('BATTER UP!', p.x, p.y - 30, '#fff');
+  w.toyBall = { x: p.x - 6, y: p.y - 14, vx: -170, vy: -150, bounces: 0, rest: 0 };
+}
+function roomToys(w, cx) {
+  const dt = 1 / 60, d = w.dog;
+  if (w.tonie) {
+    if (game.t > w.tonie.next) {
+      w.tonie.next = game.t + 0.42;
+      w.pops.add('♪', 152 + rand(-6, 6), 94, pick(['#ff7d98', '#8fd8ff', '#ffde5c', '#9fe35f']), 1, 1.4);
+      if (d.onGround && !d.stay) d.vy = -150;
+    }
+  }
+  if (w.web) {
+    const age = game.t - w.web.t;
+    if (age > 0.55) w.web = null;
+    else { const p = w.p; G.strokeStyle = '#ffffff'; G.lineWidth = 1; G.beginPath(); G.moveTo(p.x - cx + 4 * p.face, p.y - 18); G.lineTo(w.web.x - cx, 0); G.stroke(); }
+  }
+  const b = w.toyBall;
+  if (b) {
+    if (!b.rest) {
+      b.vy += 600 * dt; b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.x < 6 || b.x > 250) { b.vx *= -0.8; b.x = clamp(b.x, 6, 250); audio.sfx('bump'); }
+      if (b.y < 4) { b.vy = Math.abs(b.vy); audio.sfx('bump'); }
+      if (b.y > 121) { b.y = 121; b.vy *= -0.62; b.vx *= 0.8; b.bounces++; audio.sfx('bump'); if (b.bounces > 5) b.rest = game.t; }
+      d.stay = true; d.walkTo = { x: b.x, speed: 130 };
+    } else if (game.t - b.rest > 1.2) { w.toyBall = null; d.stay = false; d.walkTo = null; audio.sfx('bark', { n: 2 }); w.pops.add('GOT IT!', d.x, d.y - 18, '#fff'); }
+    if (w.toyBall) spr(SPR.baseball, b.x - 2 - cx, b.y - 2);
+  }
+}
+
 function exitRoom(w) {
   if (!w.bunny.got) { w.triggers.push({ x: 236, fn: () => exitRoom(w) }); w.p.x = 228; toast('Wait! Grab Big Bunny first!'); return; }
   w.locked = true;
@@ -191,7 +252,7 @@ function exitRoom(w) {
 const yard = {
   id: 'yard', title: 'HOME', sub: 'Find Clue #1', music: 'title',
   width: 480, ground: 120, startX: 30,
-  solids: [[216, 18, 10]],
+  inter: [{ x: 115, y: 78, r: 20, label: 'PEEK', fn: async (w) => { w.locked = true; await say('isaac', "The garage is FULL of moving boxes... and Dad's fishing rods. We're really moving!"); w.locked = false; } }],
   setup(w, arg) {
     w.npc('freida', SPR.freida, 262, { face: -1, pose: 'loaf' });
     w.npc('mom', SPR.mom, -20, { face: 1, hidden: true });
@@ -203,12 +264,12 @@ const yard = {
   async after(w) {
     w.locked = true;
     w.npcs.freida.x = 262;
-    await clue(w, 1, "It's BIG!");
+    await theWorm(w);
     await say('isaac', "BIG?! What's BIG?!");
     const mom = w.npcs.mom; mom.hidden = false; mom.x = -10;
     await w.walkTo(mom, 180, 80);
     await say('mom', 'You got Clue #1! I KNEW that cat was hiding something.');
-    await say('mom', "Clue #2 is with Dad at the SANDLOT. Hop on your scooter!");
+    await say('mom', "Clue #2 is with Dad at BRUNSDALE FIELDS. Hop on your scooter!");
     w.p.face = 1;
     w.goal = 'Ride your scooter →';
     w.locked = false;
@@ -247,14 +308,15 @@ async function freidaAmbush(w) {
 }
 
 // =====================================================================================
-// 2. THE NEIGHBORHOOD — scooter ride to the sandlot
+// 2. THE NEIGHBORHOOD — scooter ride to Brunsdale Fields
 // =====================================================================================
 const hood = {
-  id: 'hood', title: 'THE NEIGHBORHOOD', sub: 'Scooter to the sandlot!', music: 'hood', mode: 'scooter',
+  id: 'hood', title: 'THE NEIGHBORHOOD', sub: 'Scooter to Brunsdale Fields!', music: 'hood', mode: 'scooter',
   width: 1640, ground: 120, startX: 40, item: 'card', padLabels: { a: 'JUMP' },
-  solids: [[262, 12, 16, 'bin'], [424, 8, 10, 'cone'], [446, 8, 10, 'cone'], [604, 28, 14, 'hedge'], [826, 12, 16, 'bin'], [840, 12, 16, 'bin2'], [1030, 22, 10, 'wagon'], [1190, 8, 10, 'cone']],
+  props: [[262, 12, 16, 'bin'], [604, 28, 14, 'hedge'], [826, 12, 16, 'bin'], [840, 12, 16, 'bin2']],
   ramps: [[334, 44, 16], [700, 48, 20], [948, 44, 18], [1096, 60, 24]],
   plats: [[530, 104, 28, 'bench'], [1250, 102, 32, 'table']],
+  inter: [{ x: 886, y: 92, r: 14, label: 'READ', fn: async (w) => { w.locked = true; await say('isaac', 'A book called "HOW TO TRAIN YOUR POODLE"... Hey Sunny, look!'); audio.sfx('bark', { n: 1 }); await say('sunny', '...ruff? (Sunny looks VERY nervous.)'); w.locked = false; } }],
   items: [[150, 100], [268, 88], [382, 80], [404, 70], [544, 92], [730, 62], [770, 56], [900, 98], [1130, 52], [1170, 46]],
   setup(w) {
     w.npc('dad', SPR.dad, 1520, { face: -1 });
@@ -306,6 +368,14 @@ const hood = {
     else { rect(x, p.y, ww, 3, '#c98f55'); rect(x + 4, p.y + 3, 2, w.ground - p.y - 3, '#8a5a3a'); rect(x + ww - 6, p.y + 3, 2, w.ground - p.y - 3, '#8a5a3a'); rect(x - 4, p.y + 8, ww + 8, 2, '#c98f55'); }
   },
   mid(cx, w) {
+    // little free library
+    const lx = 886 - cx;
+    if (lx > -20 && lx < W + 20) {
+      rect(lx - 1, w.ground - 16, 3, 16, '#6b4a2f');
+      rect(lx - 8, w.ground - 30, 16, 14, '#2a1f33'); rect(lx - 7, w.ground - 29, 14, 12, '#e8483f');
+      rect(lx - 5, w.ground - 27, 10, 8, '#bfe4ff'); rect(lx - 4, w.ground - 24, 2, 5, '#ffde5c'); rect(lx - 1, w.ground - 25, 2, 6, '#3d7be0'); rect(lx + 2, w.ground - 23, 2, 4, '#4cb944');
+      tri(lx - 10, w.ground - 30, lx + 10, w.ground - 30, lx, w.ground - 38, '#2a1f33'); tri(lx - 8, w.ground - 31, lx + 8, w.ground - 31, lx, w.ground - 37, '#7a3d20');
+    }
     // sprinklers
     for (const sx of [650, 1070]) {
       const x = sx - cx; if (x < -40 || x > W + 40) continue;
@@ -316,19 +386,19 @@ const hood = {
         rect(px, py, 1, 1, i % 2 ? '#8fd8ff' : '#dff6ff');
       }
     }
-    // sandlot
+    // Brunsdale Fields (the ball fields)
     const sx = 1380 - cx;
     if (sx < W + 10) {
       rect(sx + 30, w.ground - 1, 260, 2, '#c9925a');
       ellipse(sx + 150, w.ground + 4, 26, 3, '#c9925a');
       rect(sx + 204, w.ground - 44, 2, 44, '#8a939c'); rect(sx + 250, w.ground - 44, 2, 44, '#8a939c');
       A.chainFence(1380 + 200, 1380 + 254, w.ground - 44, w.ground, cx);
-      A.sign(sx + 40, w.ground, ['SANDLOT'], { bg: '#3d7be0' });
+      A.sign(sx + 34, w.ground, ['BRUNSDALE', 'FIELDS'], { bg: '#3d7be0' });
     }
   },
 };
 async function meetDad(w) {
-  w.locked = true;
+  w.locked = true; cardTally(w);
   await w.playerTo(1470, 60);
   w.p.face = 1;
   await say('dad', `There's my birthday boy! Happy birthday, ${K}!`);
@@ -340,18 +410,19 @@ async function meetDad(w) {
 // =====================================================================================
 // 3a. DIKE EAST SKATE PARK — out-skate the Creeper Crew
 // =====================================================================================
-const CREW_SCORE = 800;
+const CREW_SCORE = 1000;
 const skate = {
   id: 'skate', title: 'DIKE EAST SKATE PARK', sub: 'Out-trick the Creeper Crew!', music: 'skate', mode: 'skate',
-  width: 1900, ground: 120, startX: 60, item: 'diamond', pad: 'trick', padLabels: { a: 'JUMP', b: 'SPIN' },
+  width: 1900, ground: 120, startX: 60, item: 'diamond', pad: 'trick', padLabels: { a: 'JUMP', b: 'SPIN', down: 'grab' },
   ramps: [[230, 40, 16], [470, 50, 22], [760, 44, 18], [1030, 56, 26], [1370, 50, 22], [1640, 72, 34]],
   rails: [[330, 100, 70], [860, 98, 100], [1180, 100, 90]],
-  solids: [[600, 40, 14, 'box'], [1500, 32, 12, 'box']],
   plats: [],
   items: [[262, 74], [520, 58], [620, 92], [800, 70], [900, 86], [1080, 48], [1230, 86], [1410, 62], [1690, 34], [1730, 40]],
   setup(w) {
     w.crew = [0, 1, 2].map((i) => ({ x: 120 + i * 16, y: 0, vy: 0, t: i * 0.6 }));
     w.npc('c1', { idle: SPR.creeper }, 130, { face: -1 });
+    w.npc('judge', SPR.mom, 152, { face: -1 });
+    w.npc('fcam', { idle: SPR.freida.loaf }, 1516, { face: -1 });
     w.locked = true;
     w.onTrick = (pts) => { if (pts && w.score >= CREW_SCORE && !w.beat) { w.beat = true; banner('NEW HIGH SCORE!<small>You beat the Creeper Crew!</small>', 1800); audio.sfx('record'); } };
     w.triggers.push({ x: 1800, fn: () => skateEnd(w) });
@@ -359,12 +430,13 @@ const skate = {
   async intro(w) {
     w.p.vx = 0;
     await wait(0.4);
+    await say('mom', "I'm the OFFICIAL JUDGE of today's skate contest! Show me your best tricks, kiddo!");
     await say('creeper', 'Sssssso... you think you can ssskate at DIKE EAST?');
     await say('creeper', `The CREEPER CREW scored ${CREW_SCORE} pointsss. Beat THAT and we'll tell you where to go next.`);
     await say('isaac', "Challenge ACCEPTED!");
-    toast(input.touchMode ? 'JUMP to ollie · in the air: JUMP = kickflip, SPIN = 360' : 'SPACE ollie · in air: SPACE kickflip, X spin 360 · grind the rails!', 5000);
-    w.npcs.c1.hidden = true;
+    w.npcs.c1.hidden = true; w.npcs.judge.hidden = true;
     w.locked = false;
+    skateTips(w);
   },
   hud(w) { return [`${icon('diamond')} ${w.got}/${w.items.length}`, '', `<span style="color:${w.score >= CREW_SCORE ? '#9fe35f' : '#fff'}">TRICKS ${w.score}</span> <small style="opacity:.8">/ ${CREW_SCORE}</small>`]; },
   bg(cx) {
@@ -410,6 +482,10 @@ const skate = {
     for (let bx = 0; bx < ww; bx += 8) for (let by = 0; by < h; by += 7) { rect(x + bx, s.top + by, 8, 7, (bx + by) % 2 ? '#9aa0aa' : '#a9adb6'); rect(x + bx, s.top + by, 8, 1, '#c9ccd3'); }
     rect(x, s.top, ww, 1, '#ffde5c');
   },
+  fg(cx, w) {
+    const j = w.npcs.judge;
+    if (w.scorecard && j && !j.hidden) { const x = j.x - cx + 2, y = j.y - 44 + Math.round(Math.sin(game.t * 6) * 2); rect(x, y + 8, 1, 6, '#6b4a2f'); rect(x - 7, y - 2, 15, 10, '#2a1f33'); rect(x - 6, y - 1, 13, 8, '#ffffff'); pixelText('10', x - 3, y + 1, '#e8483f'); }
+  },
   mid(cx, w) {
     // creeper crew in the back, bouncing on boards
     for (const c of w.crew) {
@@ -420,12 +496,35 @@ const skate = {
     }
   },
 };
+async function skateTips(w) {
+  const touch = input.touchMode, gp = input.padConnected && !touch;
+  const J = touch ? 'JUMP' : gp ? 'A' : 'SPACE', S = touch ? 'SPIN' : gp ? 'B' : 'X', D = touch ? '▼' : '↓';
+  const steps = [
+    [`${J} to ollie! Launch off the ramps!`, () => w.p.air > 0.3],
+    [`In the air: ${J} = KICKFLIP · ${S} = 360!`, () => (w.trickCount || 0) >= 2],
+    [`Hold ◀ + ${J} = HEELFLIP · ▶ + ${J} = TRE FLIP!`, () => (w.trickCount || 0) >= 4],
+    [`Hold ${D} in the air to GRAB... keep holding for SUPERMAN!`, () => (w.trickCount || 0) >= 6],
+    ['Land on the rails to GRIND! Mix tricks for a SICK COMBO!', null],
+  ];
+  for (const [text, done] of steps) {
+    if (game.scene?.name !== 'skate' || w.locked) break;
+    tip(text);
+    const t0 = game.t;
+    await until(() => (done ? done() : false) || game.t - t0 > 7 || w.locked);
+    await wait(0.6);
+  }
+  tip('');
+}
 async function skateEnd(w) {
-  w.locked = true;
+  w.locked = true; cardTally(w);
+  tip('');
   await until(() => w.p.onGround);
   await w.playerTo(1840, 40);
-  const c = w.npcs.c1; c.x = 1872; c.hidden = false; c.face = -1;
+  const c = w.npcs.c1; c.x = 1884; c.hidden = false; c.face = -1;
+  const j = w.npcs.judge; j.x = 1862; j.hidden = false; j.face = -1; j.pose = 'wave'; w.scorecard = true;
   w.p.face = 1;
+  audio.sfx('cheer');
+  await say('mom', `The judge has decided... that run gets a TEN! TEN! TEN!!!`);
   if (w.score >= CREW_SCORE) await say('creeper', `SSSSSSICK! ${w.score} pointsss! You out-ssskated the whole CREEPER CREW!`);
   else await say('creeper', `${w.score} pointsss... ssso close! But it's your BIRTHDAY, ssso... you WIN!`);
   await say('creeper', "Here'sss the ssssecret: head to ISLAND PARK POOL. Ssssomeone there has Clue #3...");
@@ -442,18 +541,25 @@ async function skateEnd(w) {
 }
 
 // =====================================================================================
-// 3b. RED RIVER TRAIL — bike + fishing with Mom
+// 3b. RED RIVER TRAIL — bike to Lion's Park; Mom (bird watching) watches Isaac fish
 // =====================================================================================
 const river = {
-  id: 'river', title: 'RED RIVER TRAIL', sub: 'Bike to Mom\'s fishing spot!', music: 'river', mode: 'bike',
+  id: 'river', title: 'RED RIVER TRAIL', sub: "Bike to Lion's Park!", music: 'river', mode: 'bike',
+  inter: [{ x: 706, y: 96, r: 16, label: 'LOOK', fn: async (w) => {
+    w.locked = true; w.heronT = game.t;
+    audio.sfx('select');
+    await say('isaac', "Whoa, down by the water! A GREAT BLUE HERON! Mom would LOVE this!");
+    w.locked = false;
+  } }],
   width: 1640, ground: 120, startX: 40, item: 'card',
-  solids: [[300, 22, 8, 'log'], [520, 12, 8, 'rock'], [770, 24, 9, 'log'], [1000, 10, 7, 'rock'], [1012, 12, 10, 'rock'], [1260, 22, 8, 'log']],
+  props: [[1260, 22, 8, 'log']],
   ramps: [[420, 40, 16], [880, 44, 20], [1120, 40, 16]],
   items: [[180, 100], [311, 88], [450, 74], [470, 66], [640, 98], [781, 86], [910, 62], [940, 60], [1150, 70], [1380, 98]],
   setup(w) {
     w.geese = [640, 1190].map((x) => ({ x, y: w.ground, fly: 0, vx: 0, vy: 0, honked: false }));
     w.fish = [];
-    w.npc('mom', { idle: SPR.mom.idle }, 1560, { face: -1 });
+    w.npc('mom', { idle: SPR.mom.idle }, 1566, { face: -1 });
+    w.npc('fcam', { idle: SPR.freida.loaf }, 1270, { face: -1, y: w.ground - 8 });
     w.triggers.push({ x: 1500, fn: () => fishing(w) });
     startBrook(w);
   },
@@ -486,9 +592,23 @@ const river = {
       sprRot(SPR.fish, fx, fy, (f.t - 0.5) * 2.2);
       if (f.t < 0.05 || (f.t > 0.95 && !f.splashed)) { if (f.t > 0.95) { f.splashed = true; audio.sfx('splash'); } }
     }
-    // near bank
+    // great blue heron fishing in the shallows (a hidden LOOK spot points it out)
+    const hx = Math.round(726 - cx * 0.7 - 200);
+    if (hx > -20 && hx < W + 20) { spr(SPR.heron, hx, 90 + (w.heronT && game.t - w.heronT < 1 ? -2 : 0)); rect(hx - 2, 103, 12, 1, '#9c7a66'); }
+    // near bank: riparian grasses, willows and cattails
     rect(0, 106, W, 14, '#6aa84f');
-    for (let x = -(Math.round(cx * 0.9) % 12); x < W; x += 12) { rect(x, 104, 1, 3, '#4ca83c'); rect(x + 5, 105, 1, 2, '#4ca83c'); }
+    const off = Math.round(cx * 0.9);
+    for (let x = -(off % 12); x < W; x += 12) { rect(x, 102, 1, 5, '#4ca83c'); rect(x + 5, 103, 1, 4, '#5cbf4a'); rect(x + 8, 104, 1, 3, '#3f8a3a'); }
+    for (let i = -1; i < 9; i++) {
+      const x = i * 37 - (off % 37) + 10;
+      rect(x, 94, 1, 12, '#3f8a3a'); rect(x - 1, 92, 3, 6, '#7a4e2d'); rect(x + 4, 97, 1, 9, '#3f8a3a'); rect(x + 3, 95, 3, 5, '#6b4424');
+    }
+    for (let i = -1; i < 4; i++) {
+      const x = i * 131 - (Math.round(cx * 0.85) % 131) + 60;
+      rect(x - 2, 72, 4, 34, '#6b4a2f');
+      circle(x, 70, 12, '#6f9a52');
+      for (let k = -12; k <= 12; k += 3) rect(x + k, 70, 1, 16 + ((k * 7) & 7), '#7fae5c');
+    }
   },
   drawGround(cx, w) {
     const g = w.ground;
@@ -515,21 +635,25 @@ const river = {
       spr(img, x - 5, g.y - img.height - (g.fly ? 0 : Math.abs(Math.sin(game.t * 5 + g.x)) * 1), true);
       if (g.fly) rect(x - 2, g.y - 9 - (Math.floor(game.t * 10) % 2) * 3, 7, 1, '#2a1f33');
     }
-    // Mom's fishing spot
-    const mx = 1560 - cx;
-    if (mx < W + 20) {
-      rect(mx + 6, w.ground - 6, 8, 6, '#e6e6e6'); // bucket
-      rect(mx + 14, w.ground - 5, 10, 5, '#3f9b3a'); rect(mx + 14, w.ground - 5, 10, 1, '#62bf4c'); // tackle box
+    // Lion's Park: Mom bird watching, rods and tackle ready for Isaac
+    const mx = 1566 - cx;
+    if (mx < W + 60) {
+      A.sign(mx - 116, w.ground, ["LION'S PARK"], { bg: '#2c7a34' });
+      rect(mx + 10, w.ground - 6, 8, 6, '#e6e6e6'); rect(mx + 10, w.ground - 6, 8, 1, '#9aa3b8'); // bucket
+      rect(mx + 20, w.ground - 5, 10, 5, '#3f9b3a'); rect(mx + 20, w.ground - 5, 10, 1, '#62bf4c'); // tackle box
+      rect(mx + 30, w.ground - 30, 1, 30, '#6b4a2f'); rect(mx + 33, w.ground - 28, 1, 28, '#2a1f33'); // two rods
+      const m = w.npcs.mom;
+      if (m && !m.hidden) { rect(m.x - cx - 6, m.y - 27, 3, 3, '#2a1f33'); rect(m.x - cx - 3, m.y - 27, 3, 3, '#2a1f33'); rect(m.x - cx - 5, m.y - 26, 1, 1, '#8fd8ff'); }
     }
   },
   exit() { stopBrook(); },
 };
 async function fishing(w) {
-  w.locked = true;
+  w.locked = true; cardTally(w);
   await w.playerTo(1530, 50);
   w.p.face = 1;
-  await say('mom', `${K}! You found my secret fishing spot on the Red River!`);
-  await say('mom', "I've been waiting ALL morning for a bite. Want to try?");
+  await say('mom', `${K}! Welcome to LION'S PARK! ...Shhh — the AMERICAN WHITE PELICANS are out. I count SEVENTEEN!`);
+  await say('mom', "I brought your fishing rod. Bird watching is great... but I REALLY want to watch you catch a big one!");
   await say('isaac', 'YES! Gimme the rod!');
   stopBrook();
   fadeTo(() => setScene(battleScene('catfish')), 'flash');
@@ -543,15 +667,18 @@ function startBrook() {
 function stopBrook() { clearInterval(brookTimer); }
 
 // =====================================================================================
-// 4. ISLAND PARK POOL — Route 8
+// 4. ISLAND PARK POOL — on 7th St
 // =====================================================================================
 const pool = {
-  id: 'pool', title: 'ISLAND PARK POOL', sub: 'Route 8 · Find Clue #3', music: 'pool',
+  id: 'pool', title: 'ISLAND PARK POOL', sub: '7th St · Find Clue #3', music: 'pool',
   width: 1320, ground: 120, startX: 40, item: 'card',
-  solids: [[180, 22, 7, 'lounge'], [206, 22, 7, 'lounge'], [430, 22, 7, 'lounge'], [612, 10, 30, 'guard'], [790, 22, 7, 'lounge'], [816, 22, 7, 'lounge']],
+  props: [[180, 22, 7, 'lounge'], [206, 22, 7, 'lounge'], [430, 22, 7, 'lounge'], [612, 10, 30, 'guard'], [790, 22, 7, 'lounge'], [816, 22, 7, 'lounge']],
   bouncers: [[292, 86, 34, 330, 'umbrella'], [506, 82, 34, 360, 'umbrella'], [900, 84, 34, 340, 'umbrella'], [1060, 80, 34, 380, 'umbrella']],
+  inter: [{ x: 776, y: 108, r: 14, label: 'PET', fn: (w, it) => { audio.sfx(it.uses % 2 ? 'purr' : 'meow'); w.pops.add(it.uses % 2 ? 'PURRR...' : '...MRRP?', it.x, it.y - 6, '#fff'); w.hop(w.npcs.fcam, 90); } }],
   items: [[140, 100], [217, 96], [309, 50], [309, 30], [523, 40], [617, 76], [700, 100], [917, 42], [1077, 26], [1150, 98]],
   setup(w) {
+    w.npc('fcam', { idle: SPR.freida.loaf }, 800, { face: 1, y: w.ground - 7 });
+    w.parkedRide = save.data.path === 'river' ? 'bike' : 'board';
     w.triggers.push({ x: 1150, fn: () => wildSunny(w) });
     w.goal = '';
   },
@@ -579,7 +706,7 @@ const pool = {
     for (let i = 0; i < 6; i++) { const ux = Math.round(i * 110 + 200 - cx * 0.55) % 700; const x = ux < -40 ? ux + 700 : ux; rect(x + 8, 96, 1, 12, '#fff'); tri(x, 97, x + 17, 97, x + 8, 90, '#2f6fd6'); }
     A.chainFence(0, W, 92, 108, 0);
     rect(0, 108, W, 12, '#e8e2d6');
-    // tall grass by the fence (Route 8!)
+    // tall grass by the fence (a wild-encounter nod)
     for (let x = -(Math.round(cx * 0.9) % 10); x < W; x += 10) { tri(x, 110, x + 4, 110, x + 2, 100, '#3fae3a'); tri(x + 4, 110, x + 9, 110, x + 7, 102, '#2c8a2c'); }
   },
   drawGround(cx, w) {
@@ -591,8 +718,15 @@ const pool = {
     for (let x = -(cx % 36); x < W; x += 36) rect(x, g + 12, 1, H, '#2a8ad0');
     for (let i = 0; i < 3; i++) for (let x = -(Math.round(cx) % 6); x < W; x += 6) rect(x, g + 14 + i * 4, 3, 1, i % 2 ? '#ff6a5a' : '#ffffff');
     for (let i = 0; i < 16; i++) { const x = Math.round((i * 41 + game.t * 8) % W); rect(x, g + 13 + (i % 4) * 3, 4, 1, '#8fdcff'); }
-    // route sign
-    const x = 60 - cx; if (x > -80 && x < W) A.sign(x, g, ['ROUTE 8', 'ISLAND PARK POOL'], { bg: '#3d7be0' });
+    // his ride, parked at the rack
+    const rx = 24 - cx;
+    if (rx > -30) {
+      for (let i = 0; i < 3; i++) { rect(rx + i * 8, g - 12, 1, 12, '#8a939c'); rect(rx + i * 8, g - 12, 6, 1, '#8a939c'); rect(rx + i * 8 + 5, g - 12, 1, 12, '#8a939c'); }
+      if (w.parkedRide === 'bike') { G.strokeStyle = '#2a1f33'; for (const bx of [rx + 2, rx + 16]) { G.beginPath(); G.arc(bx, g - 5, 5, 0, Math.PI * 2); G.stroke(); } rect(rx + 2, g - 10, 14, 2, '#4cb944'); rect(rx + 14, g - 14, 2, 5, '#2a1f33'); }
+      else { rect(rx + 3, g - 14, 2, 14, '#2a1f33'); rect(rx + 3, g - 14, 1, 13, '#e8752a'); }
+    }
+    // street sign
+    const x = 60 - cx; if (x > -80 && x < W) A.sign(x, g, ['7TH ST', 'ISLAND PARK POOL'], { bg: '#3d7be0' });
   },
   drawSolid(s, cx, w) {
     const x = s.x0 - cx, ww = s.x1 - s.x0;
@@ -616,7 +750,7 @@ const pool = {
   },
 };
 async function wildSunny(w) {
-  w.locked = true;
+  w.locked = true; cardTally(w);
   const d = w.dog;
   d.stay = true;
   await say('isaac', `Hey ${CONFIG.dog}, wait up! Where are you going?!`);
@@ -638,6 +772,15 @@ async function wildSunny(w) {
 const newhouse = {
   id: 'newhouse', title: 'THE NEW HOUSE', sub: 'Big... bouncy... in the backyard?!', music: 'title',
   width: 900, ground: 126, startX: 30,
+  inter: [
+    { x: 176, y: 100, r: 18, label: 'SNIFF', fn: async (w, it) => {
+      w.locked = true;
+      if (it.uses === 1) { await say('isaac', 'Mmmm... these flowers smell AMAZING!'); audio.sfx('blip', { f: 1400 }); w.pops.add('PSST!', 176, 96, '#9fe35f'); await say('narrator', '(A flower whispers:) "Psssst... check the BACKYARD!"'); await say('isaac', 'Did that flower just TALK?!'); }
+      else { audio.sfx('bark', { n: 1 }); w.pops.add('ACHOO!', w.dog.x, w.dog.y - 18, '#fff'); await say('sunny', 'AH-CHOO! (Sunny is allergic to fancy talking flowers.)'); }
+      w.locked = false;
+    } },
+    { x: 246, y: 82, r: 12, label: 'KNOCK', fn: async (w) => { w.locked = true; audio.sfx('bump'); await wait(0.25); audio.sfx('bump'); await say('isaac', "Knock knock! ...Nobody's answering. Everybody must be out in the BACKYARD!"); w.locked = false; } },
+  ],
   setup(w) {
     w.gate = 0;
     w.present = { x: 770, stage: 0, t: 0, open: false };
@@ -669,7 +812,9 @@ const newhouse = {
     // big tree
     const tx = 404 - cx;
     rect(tx - 7, w.ground - 90, 14, 90, '#4a3526'); rect(tx - 4, w.ground - 90, 3, 90, '#5d4433');
-    for (const [dx, dy, r] of [[-20, -96, 20], [8, -104, 24], [30, -88, 18], [-4, -80, 16]]) circle(tx + dx, w.ground + dy, r, '#3f8a3a');
+    for (const [dx, dy, r] of [[-20, -96, 20], [8, -104, 24], [30, -88, 18], [-4, -80, 16]]) circle(tx + dx, w.ground + dy + 2, r, '#1f5a28');
+    for (const [dx, dy, r] of [[-20, -96, 20], [8, -104, 24], [30, -88, 18], [-4, -80, 16]]) circle(tx + dx, w.ground + dy, r - 1, '#2f7a36');
+    for (const [dx, dy, r] of [[-26, -104, 7], [2, -114, 9], [26, -96, 6]]) circle(tx + dx, w.ground + dy, r, '#5cb84a');
     // side fence + gate
     A.fenceWood(430, 552, w.ground, 34, cx);
     const gx = 552 - cx, open = w.gate;
@@ -682,6 +827,12 @@ const newhouse = {
     if (!pr.open) A.present(pr.x - cx, w.ground, pr.stage, pr.t);
     else A.trampoline(pr.x - cx, w.ground, 84, w.trampSink || 0);
     pr.t += 1 / 60;
+    const bh = w.bunnyHop;
+    if (bh) {
+      bh.vy += 400 / 60; bh.y += bh.vy / 60;
+      if (bh.y > w.ground - 34) { bh.y = w.ground - 34; bh.vy = -170; audio.sfx('boing', { p: 4 }); w.trampSink = 3; setTimeout(() => (w.trampSink = 0), 100); }
+      sprRot(SPR.bunny, bh.x - cx + 18, bh.y, Math.sin(game.t * 6) * 0.3);
+    }
   },
   overlay(cx, w) {
     if (w.fireworks) for (const f of w.fireworks) {
@@ -698,14 +849,18 @@ async function reveal(w) {
   mom.x = 676; mom.face = 1;
   w.p.face = 1;
   await say('mom', 'SURPRISE!!! You made it!');
+  await say('isaac', 'FREIDA?! How did YOU get here first?!');
+  audio.sfx('meow');
+  await say('freida', '...mrrp. (Freida does not explain.)');
   await say('dad', "You found ALL THREE clues. It's BIG... it's BOUNCY... and it's in our new BACKYARD...");
   await say('mom', 'Go on... OPEN IT!');
+  audio.stop();
   await w.playerTo(722, 40);
   setPad('action', { a: 'OPEN!' });
   w.goal = 'Tap OPEN to rip the paper!';
   for (let s = 1; s <= 3; s++) {
     await until(() => input.aPressed || input.tapPressed);
-    audio.sfx('rip'); game.shake = 2;
+    audio.sfx('rip'); audio.sfx('snareroll', { n: s }); game.shake = 2;
     w.parts.burst(w.present.x + rand(-20, 20), w.ground - 30, 24, { colors: ['#e8483f', '#ffde5c', '#ff9a8f'], speed: 120, g: 260, up: 60, w: 2, h: 2 });
     w.present.stage = s; w.present.t = 0;
     w.hop(w.p, 100);
@@ -725,10 +880,17 @@ async function reveal(w) {
   await say('isaac', 'A TRAMPOLINE?!?! NO WAY!!! NO WAAAAY!!!');
   await say('mom', `HAPPY 8th BIRTHDAY, ${K}! We love you SO much!`);
   await say('dad', CONFIG.moveLine);
+  await say('dad', 'And remember... with great BOUNCE comes great responsibility!');
   await say('sunny', 'ARF ARF ARF!!! (Sunny wants to bounce too!)');
   await say('freida', '...mrrrp. (Freida approves. Probably.)');
   await say('dad', "Well? What are you waiting for? JUMP ON IT!");
   clearInterval(party);
+  // Big Bunny calls first bounce
+  w.bunnyHop = { x: 752, y: w.ground - 40, vy: -120, t: 0 };
+  w.pack = false; audio.sfx('boing', { p: 5 });
+  banner('BIG BUNNY<br>CALLED FIRST BOUNCE!', 1800);
+  await wait(1.8);
+  w.bunnyHop = null; w.pack = true;
   // hop on!
   w.p.vy = -300; audio.sfx('jump');
   await w.playerTo(770, 80);

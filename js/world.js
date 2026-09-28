@@ -4,7 +4,8 @@ import { W, H, G, game, rect, spr, sprRot, clamp, lerp, rand, pick, Particles, P
 import { SPR } from './sprites.js';
 import { input } from './input.js';
 import { audio } from './audio.js';
-import { ui } from './ui.js';
+import { ui, padLabel, toast } from './ui.js';
+import { drawCard } from './cards.js';
 
 const MODES = {
   walk: { acc: 700, max: 82, fric: 1000, air: 500, jump: 292, grav: 830 },
@@ -19,6 +20,7 @@ export class World {
     this.width = L.width;
     this.ground = L.ground ?? 120;
     this.solids = (L.solids || []).map(([x, w, h, style]) => ({ x0: x, x1: x + w, top: this.ground - h, style }));
+    this.props = (L.props || []).map(([x, w, h, style]) => ({ x0: x, x1: x + w, top: this.ground - h, style })); // scenery only, never blocks
     this.plats = (L.plats || []).map(([x, y, w, style]) => ({ x0: x, x1: x + w, y, style }));
     this.ramps = (L.ramps || []).map(([x, w, h, style, dir = 1]) => ({ x0: x, x1: x + w, h, style, dir }));
     this.bouncers = (L.bouncers || []).map(([x, y, w, power, style]) => ({ x0: x, x1: x + w, y, power, style, squish: 0 }));
@@ -39,6 +41,9 @@ export class World {
     this.auto = null; // scripted movement target for player
     this.score = 0; // skate trick score
     this.onTrick = null;
+    this.inter = (L.inter || []).map((o) => ({ r: 16, ...o, uses: 0 }));
+    this.near = null;
+    this.baseLabel = (L.padLabels && L.padLabels.a) || 'JUMP';
   }
 
   // ---------------- scripting helpers ----------------
@@ -140,16 +145,35 @@ export class World {
     }
     if (p.bail) { p.bail -= dt; p.vx *= 0.9; if (p.bail <= 0) p.bail = 0; }
 
+    // hidden interactions: stand next to something fun and press A
+    this.near = null;
+    if (!this.locked) for (const it of this.inter) if (!it.hidden && Math.abs(p.x - it.x) < it.r && p.onGround && Math.abs(p.y - (it.floor ?? this.ground)) < 6) this.near = it;
+    padLabel(this.near && !ui.busy ? this.near.label : this.baseLabel);
+    let used = false;
+    if (control && this.near && input.aPressed && Math.abs(p.vx) < 40) {
+      used = true; this.near.uses++; p.vx = 0;
+      this.near.fn(this, this.near);
+    }
     // jump (buffered + coyote time: forgiving for small hands)
     p.jumpBuf = Math.max(0, p.jumpBuf - dt);
-    if (control && (input.aPressed || (this.mode === 'walk' && input.upPressed))) p.jumpBuf = 0.13;
+    if (control && !used && (input.aPressed || (this.mode === 'walk' && input.upPressed))) p.jumpBuf = 0.13;
     p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
     if (p.jumpBuf > 0 && p.coyote > 0) {
       p.vy = -m.jump; p.onGround = false; p.coyote = 0; p.jumpBuf = 0; p.grind = null;
       audio.sfx('jump');
     } else if (control && !p.onGround && this.mode === 'skate' && p.air > 0.06) {
-      if (input.aPressed && p.flipT <= 0) { p.flipT = 0.42; p.tricks.push('KICKFLIP'); audio.sfx('flip'); }
+      // Board tricks: JUMP = kickflip, ◀+JUMP = heelflip, ▶+JUMP = tre flip; SPIN = 360 (x2 = 720); hold ▼ = grab → superman
+      if (input.aPressed && p.flipT <= 0 && !p.grabT) {
+        const kind = input.left ? 'HEELFLIP' : input.right ? 'TRE FLIP' : 'KICKFLIP';
+        p.flipKind = kind; p.flipDur = kind === 'TRE FLIP' ? 0.5 : 0.42; p.flipT = p.flipDur;
+        p.tricks.push(kind); audio.sfx('flip');
+      }
       if (input.bPressed && p.spinT <= 0) { p.spinT = 0.5; p.tricks.push('360'); audio.sfx('whoosh'); }
+      if (input.down && p.flipT <= 0) {
+        p.grabT = (p.grabT || 0) + dt;
+        if (p.grabT >= 0.12 && !p.tricks.includes('INDY GRAB') && !p.tricks.includes('SUPERMAN')) { p.tricks.push('INDY GRAB'); audio.sfx('select'); }
+        if (p.grabT >= 0.55 && p.tricks.includes('INDY GRAB')) { p.tricks[p.tricks.indexOf('INDY GRAB')] = 'SUPERMAN'; audio.sfx('unlock'); }
+      } else p.grabT = 0;
     }
     if (!input.a && p.vy < -120 && this.mode === 'walk') p.vy += 1400 * dt; // short hop on release
 
@@ -179,20 +203,25 @@ export class World {
       audio.sfx('land');
       if (p.tricks.length) {
         if (p.flipT > 0.08 || p.spinT > 0.1) {
-          p.bail = 0.6; p.tricks = []; audio.sfx('bonk'); this.pops.add('BAIL!', p.x, p.y - 34, '#ff8a80');
+          p.bail = 0.6; p.tricks = []; p.grabT = 0; audio.sfx('bonk'); this.pops.add('BAIL!', p.x, p.y - 34, '#ff8a80');
           this.onTrick?.(null);
         } else {
-          const n = p.tricks.length;
-          const pts = p.tricks.reduce((s, t) => s + (t === '360' ? 150 : 100), 0) * n;
-          const name = n > 2 ? 'COMBO x' + n + '!' : p.tricks.join(' + ');
-          this.score += pts;
+          const spins = p.tricks.filter((t) => t === '360').length;
+          const list = p.tricks.filter((t) => t !== '360');
+          if (spins) list.push(spins > 1 ? spins * 360 + '' : '360');
+          const VAL = { KICKFLIP: 100, HEELFLIP: 120, 'TRE FLIP': 200, 'INDY GRAB': 100, SUPERMAN: 250, 360: 150, 720: 350, 1080: 600 };
+          const n = list.length;
+          const pts = list.reduce((s, t) => s + (VAL[t] || 150), 0) * n;
+          const name = n > 2 ? 'SICK COMBO x' + n + '!' : list.join(' + ');
+          this.score += pts; this.trickCount = (this.trickCount || 0) + 1;
           this.pops.add(name, p.x, p.y - 38, '#ffde5c');
           this.pops.add('+' + pts, p.x, p.y - 30, '#fff');
+          if (pts >= 250) { this.pops.add(pick(['SSSSICK!', 'SSSUPER!', 'SSSWEET!']), p.x + 26, p.y - 50, '#9fe35f'); audio.sfx('hiss'); }
           audio.sfx('perfect', { combo: n * 2 });
           this.parts.sparkle(p.x, p.y - 10, 10);
           this.onTrick?.(pts, name);
         }
-        p.tricks = []; p.flipT = 0; p.spinT = 0;
+        p.tricks = []; p.flipT = 0; p.spinT = 0; p.grabT = 0;
       }
     }
     // grinding rails
@@ -219,7 +248,17 @@ export class World {
         it.got = true; this.got++;
         audio.sfx(this.itemKind === 'card' ? 'card' : 'coin');
         this.parts.sparkle(it.x, it.y, 8);
-        this.pops.add(this.got + '/' + this.items.length, it.x, it.y - 8, '#fff');
+        if (this.itemKind === 'card') {
+          const { card, isNew, complete } = drawCard();
+          if (complete) setTimeout(() => toast('🏆 BINDER COMPLETE! You unlocked the CARD COLLECTOR CAP for Trampoline Time!', 4500), 1900);
+          this.pops.add(card.name + ' CARD!', it.x, it.y - 14, isNew ? '#ffde5c' : '#fff');
+          if (isNew && card.id === 'sunny') toast('🃏 A TRADING CARD! Collect them all for your Card Binder (📜 button)', 4200);
+          else if (isNew) toast(`🃏 New card for your binder: ${card.name}!`, 1800);
+        } else if (this.itemKind === 'diamond' && this.mode === 'skate') {
+          this.score += 50; this.pops.add('+50', it.x, it.y - 14, '#8fe8ff');
+        }
+        this.pops.add(this.got + '/' + this.items.length, it.x, it.y - 6, '#fff');
+        if (this.got === this.items.length) { audio.sfx('record'); this.pops.add('FULL SET!', p.x, p.y - 44, '#ffde5c', 1, 1.6); this.parts.confetti(p.x, p.y - 20, 30); }
       }
     }
     // triggers
@@ -282,6 +321,7 @@ export class World {
     G.save(); G.translate(0, -cy);
     L.drawGround?.(cx, this);
     for (const r of this.ramps) L.drawRamp ? L.drawRamp(r, cx, this) : this.drawRamp(r, cx);
+    for (const s of this.props) L.drawSolid?.(s, cx, this);
     for (const s of this.solids) L.drawSolid ? L.drawSolid(s, cx, this) : rect(s.x0 - cx, s.top, s.x1 - s.x0, this.ground - s.top, '#8a6a4a');
     for (const p of this.plats) L.drawPlat ? L.drawPlat(p, cx, this) : rect(p.x0 - cx, p.y, p.x1 - p.x0, 3, '#c98f55');
     for (const r of this.rails) { rect(r.x0 - cx, r.y, r.x1 - r.x0, 2, '#d6dbe8'); for (let x = r.x0 + 4; x < r.x1; x += 24) rect(x - cx, r.y + 2, 2, this.ground - r.y - 2, '#9aa3b8'); }
@@ -297,6 +337,19 @@ export class World {
         sprRot(img, it.x - cx, it.y + bob, 0, false, 1);
         if (sq < 0.25) rect(it.x - cx - 1, it.y + bob - 4, 1, 8, '#fff');
       } else spr(img, it.x - cx - img.width / 2, it.y + bob - img.height / 2);
+    }
+    for (const it of this.inter) {
+      if (it.hidden) continue;
+      const near = this.near === it, d = Math.abs(this.p.x - it.x);
+      const bx = Math.round((it.px ?? it.x) - cx), by = Math.round(it.y - 6 + Math.sin(game.t * 4) * 1.5);
+      if (near) {
+        const tw = textWidth(it.label) + 6;
+        rect(bx - tw / 2 - 1, by - 11, tw + 2, 10, '#2a1f33'); rect(bx - tw / 2, by - 10, tw, 8, '#fffbea');
+        pixelText(it.label, bx - tw / 2 + 3, by - 8, '#2a1f33');
+        rect(bx - 1, by - 1, 3, 1, '#2a1f33'); rect(bx, by, 1, 1, '#2a1f33');
+      } else if (d < 70 && !it.uses) {
+        rect(bx - 1, by - 8, 3, 7, '#2a1f33'); rect(bx, by - 7, 1, 4, '#ffde5c'); rect(bx, by - 2, 1, 1, '#ffde5c');
+      }
     }
     for (const n of Object.values(this.npcs)) if (!n.hidden) this.drawNpc(n, cx);
     if (this.dog && !this.dog.hidden) this.drawDog(this.dog, cx);
@@ -362,14 +415,18 @@ export class World {
     G.rotate(tilt);
     if (spin) G.scale(Math.cos(spin) || 0.01, 1);
     if (this.mode === 'scooter') drawScooter(0, 0, f, p.anim);
-    else if (this.mode === 'skate') drawBoard(0, 0, flipping ? p.flipT / 0.42 : 0, f);
+    else if (this.mode === 'skate') drawBoard(0, p.grabT > 0.12 ? -6 : 0, flipping ? p.flipT / (p.flipDur || 0.42) : 0, f, p.flipKind);
     else drawBike(0, 0, f, p.anim);
-    if (this.pack !== false) drawPack(0, -lift + (this.mode === 'bike' ? -2 : 0), f, p.anim);
+    const seatY = this.mode === 'bike' ? -11 : -lift; // Isaac's "feet line" relative to the ground
+    if (this.pack !== false) drawPack(0, seatY, f, p.anim);
     let img = S.ride;
     if (this.mode === 'scooter' && p.onGround && Math.abs(p.vx) > 5 && Math.floor(p.anim / 3) % 3 === 0) img = S.kick;
     if (this.mode === 'bike') img = Math.floor(p.anim / 2) % 2 ? S.bike : S.bikeB;
     if (this.mode === 'skate') img = p.onGround ? S.ride : S.jump;
-    spr(img, -8, -24 - lift + (this.mode === 'bike' ? -2 : 0), f);
+    if (this.mode === 'skate' && p.grabT > 0.12) {
+      if (p.grabT >= 0.55) { G.save(); G.translate(0, -18); G.rotate((Math.PI / 2) * (f ? -1 : 1)); G.drawImage(S.star, -8, -12); G.restore(); }
+      else spr(S.tuck, -8, -26, f);
+    } else spr(img, -8, -24 + seatY, f);
     G.restore();
   }
 }
@@ -385,22 +442,57 @@ function drawScooter(x, y, flip, a) {
   px(3, -19, 2, 2, '#4cb944'); px(8, -19, 2, 2, '#4cb944');
   wheel(x - 7 * s, y - 1, a); wheel(x + 7 * s, y - 1, a);
 }
-function drawBoard(x, y, flipT, flip) {
-  const h = flipT ? Math.round(Math.cos(flipT * Math.PI * 2) * 2) : 2;
-  if (flipT) { rect(x - 8, y - 4 - Math.abs(h), 16, Math.max(1, Math.abs(h)), h > 0 ? '#2a1f33' : '#e8483f'); }
-  else { rect(x - 8, y - 4, 16, 2, '#2a1f33'); rect(x - 7, y - 4, 14, 1, '#e8752a'); }
+function drawBoard(x, y, flipT, flip, kind = 'KICKFLIP') {
+  if (flipT) {
+    const a = flipT * Math.PI * 2 * (kind === 'HEELFLIP' ? -1 : 1);
+    const h = Math.round(Math.cos(a) * 2);
+    const w = kind === 'TRE FLIP' ? Math.max(2, Math.round(Math.abs(Math.cos(flipT * Math.PI * 2)) * 16)) : 16;
+    rect(x - w / 2, y - 4 - Math.abs(h), w, Math.max(1, Math.abs(h)), h > 0 ? '#2a1f33' : kind === 'HEELFLIP' ? '#3d7be0' : '#e8483f');
+    return;
+  }
+  rect(x - 8, y - 4, 16, 2, '#2a1f33'); rect(x - 7, y - 4, 14, 1, '#e8752a');
   wheel(x - 5, y - 1, 0); wheel(x + 5, y - 1, 0);
 }
-function drawBike(x, y, flip, a) {
+// Isaac's black/green Trek Precaliber single-speed. Local coords: (x, y) = ground under the bottom bracket.
+export function drawBike(x, y, flip, a = 0) {
   const s = flip ? -1 : 1;
-  const px = (dx, dy, w, h, c) => rect(x + (s > 0 ? dx : -dx - w), y + dy, w, h, c);
-  bigWheel(x - 8 * s, y - 5); bigWheel(x + 8 * s, y - 5);
-  px(-8, -10, 16, 2, '#4cb944');   // top tube
-  px(-3, -12, 2, 8, '#4cb944');    // seat tube
-  px(-5, -13, 5, 2, '#2a1f33');    // seat
-  px(6, -16, 2, 8, '#2a1f33');     // fork/stem
-  px(5, -17, 5, 2, '#2a1f33');     // bars
-  px(-2, -5, 3, 2, '#9aa3b8');     // crank
+  const P = (dx, dy) => [x + dx * s, y + dy];
+  const line = (a1, b1, a2, b2, c, w = 2) => {
+    const [x1, y1] = P(a1, b1), [x2, y2] = P(a2, b2);
+    const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) | 0;
+    G.fillStyle = c;
+    for (let i = 0; i <= n; i++) { const t = n ? i / n : 0; G.fillRect(Math.round(x1 + (x2 - x1) * t - (w > 1 ? 0.5 : 0)), Math.round(y1 + (y2 - y1) * t - (w > 1 ? 0.5 : 0)), w, w); }
+  };
+  const wheelAt = (dx) => {
+    const [cx, cy] = P(dx, -6);
+    for (let yy = -7; yy <= 7; yy++) for (let xx = -7; xx <= 7; xx++) {
+      const d = Math.hypot(xx, yy);
+      if (d <= 6.6 && d > 4.9) { G.fillStyle = (Math.atan2(yy, xx) * 4 + a * 0.6 | 0) % 2 ? '#1c1c22' : '#2e2e36'; G.fillRect(Math.round(cx + xx), Math.round(cy + yy), 1, 1); }
+      else if (d <= 4.9 && d > 4.0) { G.fillStyle = '#9aa3b8'; G.fillRect(Math.round(cx + xx), Math.round(cy + yy), 1, 1); }
+    }
+    for (let k = 0; k < 3; k++) { const ang = a * 0.35 + (k * Math.PI) / 3; G.fillStyle = 'rgba(214,219,232,.8)'; for (let r = 1; r < 4; r++) { G.fillRect(Math.round(cx + Math.cos(ang) * r), Math.round(cy + Math.sin(ang) * r), 1, 1); G.fillRect(Math.round(cx - Math.cos(ang) * r), Math.round(cy - Math.sin(ang) * r), 1, 1); } }
+    G.fillStyle = '#d6dbe8'; G.fillRect(Math.round(cx), Math.round(cy), 1, 1);
+  };
+  wheelAt(-10); wheelAt(10);
+  const K = '#26262e', GR = '#4cb944';
+  line(-10, -6, 0, -6, K, 1);          // chain stay
+  line(-10, -6, -3, -14, K, 1);        // seat stay
+  line(-3, -15, 0, -6, K);             // seat tube
+  line(0, -6, 7, -13, K);              // down tube
+  line(-3, -14, 7, -15, K);            // top tube
+  line(1, -8, 6, -12, GR, 1);          // green decal (down tube)
+  line(-1, -15, 5, -16, GR, 1);        // green decal (top tube)
+  line(7, -16, 10, -6, K);             // fork
+  line(6, -19, 8, -15, K, 1);          // stem
+  line(5, -19, 9, -19, K);             // bars
+  line(-6, -17, -1, -17, '#1c1c22');   // saddle
+  // crank + pedals
+  const ca = a * 0.5;
+  const [bx, by] = P(0, -6);
+  const px1 = Math.round(bx + Math.cos(ca) * 3), py1 = Math.round(by + Math.sin(ca) * 3);
+  const px2 = Math.round(bx - Math.cos(ca) * 3), py2 = Math.round(by - Math.sin(ca) * 3);
+  rect(px1 - 1, py1, 3, 1, '#9aa3b8'); rect(px2 - 1, py2, 3, 1, '#5d6680');
+  rect(bx - 1, by - 1, 3, 3, '#5d6680');
 }
 function wheel(x, y, a) { rect(x - 1, y - 1, 3, 3, '#2a1f33'); rect(x, y, 1, 1, '#d6dbe8'); }
 function bigWheel(x, y) {

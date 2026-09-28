@@ -69,8 +69,9 @@ export function bindTouch({ dpad, a, b, stage }) {
   }
 
   // Taps anywhere on the game (not on a button) advance dialogs / cards.
-  stage.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button')) return;
+  // Taps anywhere (the game, the speech bubble, the margins) advance dialogs and cards.
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, #pad, #overlay')) return;
     gesture();
     if (e.pointerType === 'touch') input.touchMode = true;
     tapQueued = true;

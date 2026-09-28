@@ -3,7 +3,7 @@ import { W, H, G, game, rect, circle, ellipse, spr, sprRot, pixelText, textWidth
 import { SPR } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { say, choose, clueCard, foeCard, banner, hud, setPad, toast } from './ui.js';
+import { say, choose, clueCard, foeCard, banner, hud, setPad, toast, wormBanner } from './ui.js';
 import { drawWorm } from './world.js';
 import { CONFIG } from './config.js';
 import { afterBattle } from './levels.js';
@@ -18,8 +18,14 @@ const FOES = {
       flavor: 'Guards clues by sitting on them. Weak to treats.' },
     script: freidaScript,
   },
+  mooneye: {
+    name: 'MOONEYE', sprite: () => SPR.goldeye, scale: 3, flip: false, theme: ['#bfe3f2', '#7a5446', '#6aa84f'], water: '#7a5446',
+    card: { who: 'goldeye', name: 'MOONEYE', hp: 30, type: 'Red River · Water-type', color: '#d4f6ff',
+      moves: [['Silver Flash', 10, 'Sparkles in the sun. Very shiny.'], ['Big Golden Eye', 20, 'Stares right back at you.']],
+      flavor: 'Goldeye or mooneye? Even the experts squint at these twins.' },
+  },
   catfish: {
-    name: 'CATFISH', sprite: () => SPR.catfish, scale: 3, theme: ['#bfe3f2', '#8a5a44', '#6aa84f'], water: '#8a5a44',
+    name: 'CATFISH', sprite: () => SPR.catfish, scale: 3, flip: false, theme: ['#bfe3f2', '#8a5a44', '#6aa84f'], water: '#8a5a44',
     card: { who: 'catfish', name: 'CHANNEL CATFISH', hp: 120, type: 'Red River · Water-type', color: '#8fd8ff',
       moves: [['Whisker Wiggle', 20, 'Tickles your line. Very sneaky.'], ['Mud Splash', 40, 'Sprays muddy Red River water everywhere.']],
       flavor: 'The biggest fish in the Red River. Rumored to swallow clues.' },
@@ -56,6 +62,7 @@ export function battleScene(id) {
       if (this.reel) this.updateReel(dt);
     },
     render() {
+      const F = this.F;
       const [skyC, groundC, platC] = F.theme;
       rect(0, 0, W, H, skyC);
       if (F.water) { rect(0, 70, W, H, F.water); for (let i = 0; i < 20; i++) rect((i * 37 + game.t * 12) % W, 74 + (i * 13) % 60, 8, 1, 'rgba(255,255,255,.25)'); }
@@ -69,7 +76,7 @@ export function battleScene(id) {
         const sx = Math.round(f.slide * 140 + (f.shake > 0 ? Math.sin(game.t * 60) * 3 : 0));
         const hop = Math.sin(f.hop * Math.PI) * 14;
         const bob = Math.sin(game.t * 2) * 1;
-        G.save(); G.translate(Math.round(f.x + sx), Math.round(f.y - hop + bob)); G.scale(-F.scale, F.scale);
+        G.save(); G.translate(Math.round(f.x + sx), Math.round(f.y - hop + bob)); G.scale((F.flip === false ? 1 : -1) * F.scale, F.scale);
         G.drawImage(img, -Math.floor(img.width / 2), -img.height); G.restore();
       }
       // Isaac
@@ -138,6 +145,9 @@ async function appear(S) {
   await wait(1.2);
   await foeCard(S.F.card);
 }
+async function caught(S) {
+  audio.sfx('crack'); S.foe.hop = 1; S.parts.burst(S.foe.x, S.foe.y - 10, 30, { colors: ['#8fdcff', '#fff'], speed: 100, g: 200, up: 60 });
+}
 function love(S, n) {
   S.love = Math.min(S.loveMax, S.love + n);
   for (let i = 0; i < 6 * n; i++) S.parts.add({ x: S.foe.x + rand(-20, 20), y: S.foe.y - 20, vx: rand(-10, 10), vy: rand(-40, -20), life: 1.2, color: '#ff7d98', w: 2, h: 2 });
@@ -147,7 +157,7 @@ function love(S, n) {
 // ---------------- FREIDA ----------------
 async function freidaScript(S) {
   await appear(S);
-  await say('narrator', 'A wild FREIDA appeared! FREIDA is sitting on something VERY suspicious...');
+  await say('narrator', 'FREIDA is sitting on something VERY suspicious...');
   while (S.love < S.loveMax) {
     const c = await choose('narrator', `What will ${K} do?`, ['🖐️ PET', '🐟 TREAT', '🏃 RUN']);
     if (c === 0) {
@@ -167,37 +177,55 @@ async function freidaScript(S) {
       love(S, 1);
     }
   }
+  audio.play('win', () => audio.play('title'));
   audio.sfx('meow');
   await say('narrator', 'FREIDA is purring! FREIDA stood up and stretched...');
   S.foe.hop = 1;
   await say('narrator', 'There was a CLUE under FREIDA the whole time!');
+  await clueCard(1);
   afterBattle('freida');
 }
 
 // ---------------- CATFISH ----------------
 async function catfishScript(S) {
-  S.foe.hidden = true;
+  // First bite: a mooneye (or is it a goldeye?)
+  S.F = FOES.mooneye; S.foe.hidden = true;
   await say('narrator', `${K} casts the line into the Red River... plip!`);
-  await wait(1.2);
+  await wait(1.1);
   S.foe.shake = 0.8; audio.sfx('splash');
-  await wait(0.6);
+  await wait(0.5);
+  await appear(S);
+  await say('mom', 'A bite! Reel it in, reel it in!');
+  await S.startReel(6);
+  await caught(S);
+  await say('narrator', 'Gotcha! The MOONEYE was caught!');
+  await say('mom', "Look at that big golden eye! Goldeye or mooneye? Honestly... they're TWINS.");
+  await say('mom', 'Catch and release! ...Cast again. I just saw something HUGE swirl by the snag!');
+  S.foe.slide = 0; S.foe.hidden = true; S.reel = null; S.love = 0; audio.sfx('splash');
+  await wait(0.9);
+  // Second bite: the big one
+  S.F = FOES.catfish;
+  await say('narrator', `${K} casts again... plip!`);
+  await wait(1.2);
+  S.foe.shake = 0.8; audio.sfx('splash'); game.shake = 3;
+  await wait(0.5);
   await appear(S);
   let bonus = 0;
   while (true) {
-    const c = await choose('narrator', `A huge CATFISH is on the line! What will ${K} do?`, ['🎣 REEL IN', '🪱 WIGGLE WORM', '🏃 RUN']);
+    const c = await choose('narrator', `A HUGE CATFISH is on the line! What will ${K} do?`, ['🎣 REEL IN', '🪱 WIGGLE WORM', '🏃 RUN']);
     if (c === 0) break;
     if (c === 1) { await say('narrator', `${K} wiggled the worm! The CATFISH is getting hungry...`); bonus += 4; love(S, 1); S.foe.hop = 1; }
     if (c === 2) { await say('narrator', "Can't run! You're holding a fishing rod!"); }
   }
   await S.startReel(Math.max(8, 16 - bonus));
   S.love = S.loveMax;
-  audio.sfx('crack'); S.foe.hop = 1; S.parts.burst(S.foe.x, S.foe.y - 10, 30, { colors: ['#8fdcff', '#fff'], speed: 100, g: 200, up: 60 });
-  audio.play('win', () => audio.play('battle'));
-  await say('narrator', 'Gotcha! The CATFISH was caught!');
+  await caught(S);
+  audio.play('win', () => audio.play('river'));
+  await say('narrator', 'Gotcha! The CHANNEL CATFISH was caught!');
   await say('mom', "THAT'S THE BIGGEST CATFISH I'VE EVER SEEN IN THE RED RIVER!");
-  await say('mom', 'Wait... there\'s a NOTE in its mouth!');
+  await say('mom', "Wait... there's a NOTE in its mouth!");
   await say('isaac', `It says... "Clue #3 is at ISLAND PARK POOL!"`);
-  await say('mom', "Catch and release! Bye, fishy! ...Now GO, I'll meet you later!");
+  await say('mom', "Catch and release! Bye, big guy! ...Go on — I'll meet you there after these pelicans.");
   S.foe.slide = 0; S.foe.hidden = true; audio.sfx('splash');
   await wait(0.5);
   afterBattle('catfish');
@@ -208,6 +236,7 @@ const SUNNY_MOVES = [
   ['SUNNY used LICK!', "It's SUPER effective! " + K + ' is giggling!'],
   ['SUNNY used PUPPY EYES!', K + " can't resist!"],
   ['SUNNY used ZOOMIES!', 'SUNNY ran around the pool 8 times!'],
+  ['SUNNY used PUP PUP BOOGIE!', K + ' answers with... THE WORM!'],
 ];
 async function sunnyScript(S) {
   await appear(S);
@@ -225,18 +254,24 @@ async function sunnyScript(S) {
       S.foe.slide = 0; S.foe.hidden = true; audio.sfx('bark', { n: 3 });
       await wait(1.2);
       S.foe.hidden = false; S.foe.hop = 1;
+      S.fetched = true;
       await say('narrator', 'SUNNY brought something back... but it is NOT the ball!');
       love(S, 2);
       break;
     }
-    if (S.love < S.loveMax) { const [a, b] = SUNNY_MOVES[turn++ % 3]; S.foe.hop = 1; audio.sfx('bark', { n: 1 }); await say('narrator', a + ' ' + b); }
+    if (S.love < S.loveMax) { const [a, b] = SUNNY_MOVES[turn++ % SUNNY_MOVES.length]; S.foe.hop = 1; audio.sfx('bark', { n: 1 }); await say('narrator', a + ' ' + b); }
   }
-  await say('sunny', 'ARF! (Sunny found Clue #3!)');
-  await clueCard(3, "It's in the BACKYARD!");
-  S.me.worm = 0.01; audio.sfx('worm');
-  await wait(1.6);
+  audio.play('win', () => audio.play('pool'));
+  if (!S.fetched) await say('narrator', 'SUNNY paddled over with something soggy... it\'s CLUE #3!');
+  else await say('sunny', 'ARF! (Sunny found Clue #3!)');
+  await clueCard(3);
+  S.me.worm = 0.01; audio.sfx('worm'); wormBanner();
+  await wait(2.4);
   S.me.worm = 0;
   await say('isaac', "It's BIG... it's BOUNCY... and it's in the BACKYARD?!");
+  const g = await choose('isaac', 'What could it BE?', ['🦘 A KANGAROO?', '🏀 GIANT BOUNCY BALL?', '🏰 BOUNCY CASTLE?']);
+  audio.sfx('bark', { n: 1 });
+  await say('sunny', ['ARF! (Nope. Freida would never allow a kangaroo.)', 'ARF! (Nope. Bigger. BOUNCIER.)', 'ARF! (Nope. But you are getting WARMER.)'][g]);
   await say('isaac', "The NEW HOUSE is right around the corner! C'mon, Sunny!");
   afterBattle('sunny');
 }

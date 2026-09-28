@@ -148,7 +148,7 @@ const SFX = {
   rip: (t) => { for (let i = 0; i < 6; i++) noise(t + i * 0.035, 0.05, 0.14, { type: 'highpass', f: 2200 + Math.random() * 1500 }); },
   boing: (t, o) => {
     const p = o.p || 1;
-    const f0 = 110 + p * 12;
+    const f0 = 220 + p * 20;
     osc('sine', f0, t, 0.42, 0.3, { to: f0 * 2.6, vib: 18 + p * 2, vibRate: 16 });
     osc('triangle', f0 * 2, t, 0.2, 0.08, { to: f0 * 4 });
   },
@@ -170,6 +170,7 @@ const SFX = {
     const u = Math.random(), f = 450 * Math.pow(1600 / 450, u * u), d = 0.011 * Math.pow(450 / f, 0.7) * 3;
     osc('sine', f, t + Math.random() * 0.1, d + 0.02, 0.018, { to: f * (1.3 + Math.random() * 0.6), attack: 0.001, release: d });
   },
+  snareroll: (t, o) => { const n = 4 + (o.n || 1) * 3; for (let i = 0; i < n; i++) noise(t + i * 0.045, 0.04, 0.05 + i * 0.012, { type: 'highpass', f: 1500 }); },
   worm: (t) => { for (let i = 0; i < 4; i++) osc('p25', 330 + i * 60, t + i * 0.1, 0.09, 0.1, { to: 250 + i * 60 }); },
   unlock: (t) => arp(t, ['C6', 'E6', 'G6', 'C7'], 0.07, 'p50', 0.12),
 };
@@ -283,7 +284,7 @@ export const SONGS = {
     tracks: [
       ['lead', 'E5:2 G5:2 A5 B5:3 D6 B5 A5 G5 E5:4 E5:2 G5:2 A5 B5:3 D6:2 E6:2 D6:4 C6:2 B5:2 A5 G5:3 A5 B5 A5 G5 E5:4 D5:2 E5:2 G5 A5:3 B5:8'],
       ['bass', 'E2 E3 E2 E3 D3 E2 B2 E2 ' + rep('E2 E3 E2 E3 D3 E2 B2 E2', 1) + ' C3 C4 C3 C4 B3 C3 G3 C3 D3 D4 D3 D4 C4 D3 A3 D3 ' + rep('E2 E3 E2 E3 D3 E2 B2 E2', 2) + ' C3 C4 C3 C4 B3 C3 G3 C3 B2 B3 B2 B3 A3 B2 F#3 B2'],
-      ['arp', rep('E4 B4 E5 B4', 8) + ' ' + rep('C4 G4 C5 G4', 2) + ' ' + rep('D4 A4 D5 A4', 2) + ' ' + rep('E4 B4 E5 B4', 4) + ' ' + rep('C4 G4 C5 G4', 2) + ' ' + rep('B3 F#4 B4 F#4', 2)],
+      ['arp', rep('E4 B4 E5 B4', 4) + ' ' + rep('C4 G4 C5 G4', 2) + ' ' + rep('D4 A4 D5 A4', 2) + ' ' + rep('E4 B4 E5 B4', 4) + ' ' + rep('C4 G4 C5 G4', 2) + ' ' + rep('B3 F#4 B4 F#4', 2)],
     ],
   },
   // Red River trail — gentle, open, a little country.
@@ -313,11 +314,11 @@ export const SONGS = {
   },
   // Happy Birthday (public domain) — festive, with drums, 3/4 in 16th steps.
   birthday: {
-    bpm: 112, spb: 4, drums: 'k...h...s...k...h...s...',
+    bpm: 112, spb: 4, drums: 's...k...h...',
     tracks: [
-      ['lead', 'G4:3 G4 A4:4 G4:4 C5:4 B4:8 G4:3 G4 A4:4 G4:4 D5:4 C5:8 G4:3 G4 G5:4 E5:4 C5:4 B4:4 A4:4 F5:3 F5 E5:4 C5:4 D5:4 C5:8 r:4'],
-      ['bass', 'r:4 C3:4 r:4 r:4 G2:4 r:4 r:4 G2:4 r:4 r:4 C3:4 r:4 r:4 C3:4 r:4 r:4 F2:4 r:4 r:4 C3:4 r:4 G2:4 C3:4 r:4 r:4'],
-      ['chord', 'r:4 ' + ['C', 'G7', 'G7', 'C', 'C7', 'F', 'C', 'C'].map((c) => `r:4 ${CH[c]}:4 ${CH[c]}:4`).join(' ')],
+      ['lead', 'G4:3 G4 A4:4 G4:4 C5:4 B4:8 G4:3 G4 A4:4 G4:4 D5:4 C5:8 G4:3 G4 G5:4 E5:4 C5:4 B4:4 A4:4 F5:3 F5 E5:4 C5:4 D5:4 C5:8'],
+      ['bass', 'r:4 C3:4 r:4 r:4 G2:4 r:4 r:4 G2:4 r:4 r:4 C3:4 r:4 r:4 C3:4 r:4 r:4 F2:4 r:4 r:4 C3:4 r:4 G2:4 C3:4 r:4'],
+      ['chord', 'r:4 ' + ['C', 'G7', 'G7', 'C', 'C7', 'F', 'C'].map((c) => `r:4 ${CH[c]}:4 ${CH[c]}:4`).join(' ') + ` r:4 ${CH.C}:4`],
     ],
   },
   // Music-box Happy Birthday for the end card.
@@ -337,10 +338,15 @@ export const SONGS = {
       ['arp', rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A5 F5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2), 0.6],
     ],
   },
+  // Toniebox tunes (music box, no loop). Twinkle Twinkle is public domain; the bark song is original.
+  tonie1: { bpm: 150, spb: 1, loop: false, echo: 0.25, tracks: [['bell', 'C5 C5 G5 G5 A5 A5 G5:2 F5 F5 E5 E5 D5 D5 C5:2'], ['soft', 'C4:4 F3:2 C4:2 F3:2 C4:2 G3:2 C4:2', 0.7]] },
+  tonie2: { bpm: 140, spb: 1, loop: false, drums: 'k.s.', tracks: [['lead', 'G4 B4 D5 B4 G4:2 r:2 A4 C5 E5 C5 A4:2 r:2 B4 D5 G5 D5 C5 A4 F#4 A4 G4:2 r:2'], ['bass', 'G2:4 G2:4 A2:4 D3:4 G2:4 D3:2 G2:2']] },
+  tonie3: { bpm: 160, spb: 1, loop: false, echo: 0.25, tracks: [['bell', 'C5:2 C6 A5 G5 E5 G5:3 D5:3 C5:2 C6 A5 G5 E5 G5:6'], ['soft', 'C4:3 C4:3 C4:3 G3:3 C4:3 C4:3 C4:6', 0.7]] },
+
   // Short jingles (no loop).
   win: { bpm: 180, loop: false, tracks: [['lead', 'C5 E5 G5 C6:3 G5 C6:4'], ['bass', 'C3:2 G3:2 C4:6']] },
   reveal: {
-    bpm: 150, loop: false, drums: 'k.k.k.k.kkkkssss',
+    bpm: 150, loop: false, drums: 'sssssssk...k...',
     tracks: [['lead', 'G4 C5 E5 G5 C6:2 E6:2 G6:8 r:2'], ['lead2', 'E4 G4 C5 E5 G5:2 C6:2 E6:8 r:2'], ['bass', 'C3:2 C3:2 G2:2 G2:2 C3:8 r:2']],
   },
 };

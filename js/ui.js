@@ -2,6 +2,9 @@
 import { input, advancePressed } from './input.js';
 import { audio } from './audio.js';
 import { PORTRAIT, SPR } from './sprites.js';
+import { CONFIG } from './config.js';
+import { save } from './save.js';
+import { binderHTML } from './cards.js';
 
 const $ = (s) => document.querySelector(s);
 const el = {
@@ -50,13 +53,16 @@ export function layout() {
     Object.assign(d, { left: left + inset + 'px', width: sw - inset * 2 + 'px', right: 'auto', top: 'auto', bottom: vh - (top + sh) + inset + 'px' });
   }
   el.hint.style.top = top + sh + 6 + 'px';
+  const tb = document.getElementById('topbtns'), inset = Math.max(4, Math.round(2 * u));
+  tb.style.top = top + inset + 'px';
+  tb.style.right = window.innerWidth - (left + sw) + inset + 'px';
   document.documentElement.style.setProperty('--stage-bottom', top + sh + 'px');
 }
 addEventListener('resize', layout);
 addEventListener('orientationchange', () => setTimeout(layout, 200));
 
 // ---------------- pad ----------------
-export function setPad(mode = 'move', { a = 'JUMP', b = null } = {}) {
+export function setPad(mode = 'move', { a = 'JUMP', b = null, down = 'worm' } = {}) {
   el.pad.dataset.mode = mode;
   el.a.textContent = a;
   el.b.textContent = b || '';
@@ -64,9 +70,12 @@ export function setPad(mode = 'move', { a = 'JUMP', b = null } = {}) {
   el.dpad.hidden = mode === 'action' || mode === 'none';
   el.dpad.querySelector('[data-dir=down]').hidden = mode !== 'trick';
   el.pad.hidden = mode === 'none';
-  const keys = { move: '← → move · SPACE ' + a.toLowerCase(), action: 'SPACE = ' + a.toLowerCase(), trick: '← → steer · SPACE ' + a.toLowerCase() + (b ? ' · X ' + b.toLowerCase() : '') + ' · ↓ worm', none: '' };
+  const keys = { move: '← → move · SPACE ' + a.toLowerCase(), action: 'SPACE = ' + a.toLowerCase(), trick: '← → steer · SPACE ' + a.toLowerCase() + (b ? ' · X ' + b.toLowerCase() : '') + ' · ↓ ' + down, none: '' };
   el.hint.textContent = keys[mode] || '';
 }
+
+// Relabel the A button without changing the pad mode (e.g. PLAY ♪ near the Toniebox).
+export function padLabel(a) { if (el.a.textContent !== a) el.a.textContent = a; }
 
 // ---------------- HUD / banner / toast ----------------
 export function hud(l = '', c = '', r = '') {
@@ -133,6 +142,7 @@ export function say(who, text, { speed = 48 } = {}) {
   el.dialog.hidden = false;
   el.dialog.classList.remove('pop'); void el.dialog.offsetWidth; el.dialog.classList.add('pop');
   el.next.hidden = true;
+  el.next.textContent = input.touchMode ? 'NEXT ▶' : input.padConnected ? 'A ▶' : 'SPACE ▶';
   if (who === 'sunny') audio.sfx('bark', { n: 2 });
   if (who === 'freida') audio.sfx('meow');
   return new Promise((resolve) => { dlg = { who, sp, full: text, shown: 0, speed, resolve, done: false, age: 0 }; });
@@ -233,15 +243,38 @@ function updateModal(dt) {
   } else if (modal.tapClose && advancePressed() && modal.age > modal.minAge) closeModal(true);
 }
 
-export function clueCard(n, text) {
+function clueRow(found) {
+  return `<div class="clue-row">${CONFIG.clues.map((c, i) => `<span class="${i < found ? 'got' : ''}">${i < found ? c.text.replace("It's ", '').replace('!', '') : '???'}</span>`).join('')}</div>`;
+}
+// Reveal clue n (1-based). Saves progress; needs an explicit "Got it" so a stray tap can't skip it.
+export function clueCard(n) {
+  save.data.clues = Math.max(save.data.clues || 0, n); save.flush();
+  const c = CONFIG.clues[n - 1];
   audio.sfx('clue');
   return overlay(`
     <div class="card clue pop">
       <div class="clue-top">CLUE ${n} of 3</div>
       <div class="clue-art">${icon('clue')}</div>
-      <div class="clue-text">${text}</div>
-      <div class="tapnext">tap / press A</div>
-    </div>`, { tapClose: true, minAge: 0.8 });
+      <div class="clue-text">${c.text}</div>
+      <div class="clue-from">${c.from}</div>
+      <div class="clue-sofar">Clues so far</div>${clueRow(n)}
+      <div class="menu-btns"><button class="big go" data-v="ok">Got it! ✓</button></div>
+    </div>`, { minAge: 0.9, cls: 'dim' });
+}
+export function clueBook() {
+  const found = save.data.clues || 0;
+  return overlay(`
+    <div class="card clue pop">
+      <div class="clue-top">📜 CLUE BOOK</div>
+      ${CONFIG.clues.map((c, i) => `<div class="book-item ${i < found ? '' : 'locked'}"><b>${i + 1}.</b> ${i < found ? `${c.text}<small>${c.from}</small>` : '??? <small>Not found yet</small>'}</div>`).join('')}
+      <div class="clue-sofar">${found >= 3 ? 'Big... bouncy... in the backyard... hmmmm!' : found ? 'Keep going to find the rest!' : 'No clues yet. Go find some, detective!'}</div>
+      ${binderHTML()}
+      <div class="menu-btns"><button class="big go" data-v="ok">Close</button></div>
+    </div>`, { minAge: 0.2, cls: 'dim' });
+}
+// Isaac's signature victory dance, announced so it's clear what's happening.
+export function wormBanner() {
+  banner("THE WORM!<small>Isaac's famous victory dance</small>", 2200, 'long');
 }
 
 // Pokémon-card-style intro for a "wild ___ appeared!" encounter.

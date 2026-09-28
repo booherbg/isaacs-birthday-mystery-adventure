@@ -494,6 +494,29 @@ const CATFISH = [
   'g...............',
 ];
 const FISH = ['..bb...', '.bbwb.b', 'bkbbbbb', '.bbbb.b', '..bb...'];
+const GOLDEYE = [
+  '.....WWWWWW......',
+  '...WWAAAAAAWW..WW',
+  '.WWAjjAAAAAAAWWW.',
+  'WWAjkjAAAAAAAAWW.',
+  '.WWWjWWWWWWWWWWW.',
+  '...WWWWWWWWWWW..W',
+  '.....gggg........',
+];
+const HERON = [
+  '..GG....',
+  '.GGwj...',
+  '..G.....',
+  '..G.....',
+  '..GG....',
+  '...GG...',
+  '..gGGGg.',
+  '.gGGGGGg',
+  '..gGGGG.',
+  '....G...',
+  '....G...',
+  '....G...',
+];
 const BUNNY = [
   '.w.w..',
   '.wpwp.',
@@ -526,14 +549,14 @@ const CREEPER = [
 ];
 const GOOSE = [
   '..KK......',
-  '.KKwj.....',
+  '.KKwK.....',
   '.KK.......',
   '.KK.......',
   '.KK..eeee.',
   '.KKeeeeeee',
   '..eeEEEEee',
   '...wwwwww.',
-  '.....jj...',
+  '.....KK...',
 ];
 
 export const SPR = {};
@@ -553,7 +576,7 @@ export function buildSprites() {
     sunny: { stand: build(SUNNY.stand), run1: build(SUNNY.run1), run2: build(SUNNY.run2), sit: build(SUNNY.sit) },
     freida: { loaf: build(FREIDA.loaf), walk1: build(FREIDA.walk1), walk2: build(FREIDA.walk2) },
     card: build(CARD), star: build(STAR), heart: build(HEART), baseball: build(BASEBALL), diamond: build(DIAMOND),
-    clue: build(CLUE), balloon: build(BALLOON8), cupcake: build(CUPCAKE), catfish: build(CATFISH), fish: build(FISH),
+    clue: build(CLUE), balloon: build(BALLOON8), cupcake: build(CUPCAKE), catfish: build(CATFISH), fish: build(FISH), goldeye: build(GOLDEYE), heron: build(HERON),
     bunny: build(BUNNY), bow: build(PRESENT_BOW), creeper: build(CREEPER), goose: build(GOOSE),
   });
   Object.assign(PORTRAIT, {

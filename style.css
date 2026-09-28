@@ -16,6 +16,7 @@ html, body {
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+.topbtns button[hidden] { display: none; }
 
 #stage {
   position: fixed; overflow: hidden; border-radius: 6px;
@@ -33,10 +34,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 }
 #hud > div { display: flex; align-items: center; gap: .4em; min-height: 1em; white-space: nowrap; }
 #hud-c { flex: 1; justify-content: center; }
-#hud-r { margin-right: calc(clamp(28px, var(--u) * 12, 44px) * 3 + 12px); }
+#hud-r { margin-right: calc(clamp(28px, var(--u) * 12, 44px) * 4 + 16px); }
 .ico { display: inline-block; width: 1.3em; height: 1.3em; background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: pixelated; vertical-align: middle; }
 
-.topbtns { position: absolute; top: calc(var(--u) * 2); right: calc(var(--u) * 2); display: flex; gap: 4px; z-index: 5; }
+.topbtns { position: fixed; display: flex; gap: 4px; z-index: 45; }
 .topbtns button {
   width: clamp(28px, calc(var(--u) * 12), 44px); height: clamp(28px, calc(var(--u) * 12), 44px);
   border-radius: 8px; border: 2px solid rgba(255, 255, 255, .5); background: rgba(20, 12, 40, .45); color: #fff;
@@ -75,7 +76,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 
 #keyhint {
   position: fixed; left: 0; right: 0; text-align: center; font-size: 13px; color: rgba(255, 255, 255, .55);
-  font-family: var(--pix); font-size: 10px; letter-spacing: .5px; pointer-events: none;
+  font-family: var(--round); font-weight: 600; font-size: 13px; letter-spacing: .3px; pointer-events: none;
 }
 .touch #keyhint, .portrait #keyhint { display: none; }
 
@@ -103,7 +104,14 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 }
 #dlg-name[hidden] { display: none; }
 #dlg-text { font-weight: 600; min-height: 2.6em; white-space: pre-wrap; }
-#dlg-next { position: absolute; right: 12px; bottom: 4px; font-size: 14px; animation: bob .6s infinite alternate; }
+#dlg-next {
+  position: absolute; right: 10px; bottom: -14px; background: var(--blue); color: #fff; border: 3px solid var(--ink);
+  border-radius: 999px; padding: 3px 12px 4px; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+  box-shadow: 0 3px 0 var(--ink); animation: nudge .7s ease-in-out infinite alternate; pointer-events: none;
+}
+#dlg-next[hidden] { display: none; }
+@keyframes nudge { to { transform: translateX(4px); } }
+#dialog { cursor: pointer; }
 @keyframes bob { to { transform: translateY(4px); } }
 #dlg-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 #dlg-choices:empty { display: none; }
@@ -116,7 +124,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 
 /* ---------- overlay / cards / menus ---------- */
 #overlay {
-  position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center;
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); gap: 10px; overflow-y: auto;
   touch-action: pan-y;
 }
@@ -139,6 +147,14 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .clue-art .ico { width: 64px; height: 52px; margin: 10px 0 4px; animation: wiggle 1.2s infinite ease-in-out; }
 @keyframes wiggle { 50% { transform: rotate(-6deg) scale(1.05); } }
 .clue-text { font-size: clamp(26px, 7vw, 40px); font-weight: 700; line-height: 1.15; }
+.clue-from { font-size: 14px; font-weight: 600; opacity: .7; margin-top: 4px; }
+.clue-sofar { font-family: var(--pix); font-size: 10px; color: #a0681a; margin: 14px 0 6px; }
+.clue-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.clue-row span { border: 2px dashed #c9a53a; border-radius: 8px; padding: 4px 10px; font-weight: 700; color: #b8a27a; }
+.clue-row span.got { border-style: solid; background: #fff; color: var(--ink); }
+.book-item { text-align: left; font-size: 20px; font-weight: 700; padding: 8px 4px; border-bottom: 2px dashed #e6d6a8; }
+.book-item small { display: block; font-size: 13px; font-weight: 600; opacity: .7; margin-left: 22px; }
+.book-item.locked { color: #b8a27a; }
 
 .tcg {
   width: min(78vw, 300px); background: linear-gradient(160deg, #fff6c9, var(--tcg) 70%); color: var(--ink);
@@ -207,7 +223,23 @@ button.big .note { display: block; font-size: 13px; font-weight: 600; opacity: .
 .bday h1 { color: #e8483f; }
 .bday p { font-size: 18px; font-weight: 600; line-height: 1.35; margin: 8px 0; }
 .bday .sign { font-style: italic; color: #7a4e8c; }
-.bday canvas { width: 100%; max-width: 360px; image-rendering: pixelated; border-radius: 10px; border: 3px solid var(--ink); }
+.bday-grid img { width: 100%; max-width: 400px; image-rendering: pixelated; border-radius: 10px; border: 3px solid var(--ink); }
+/* short, wide screens (phone sideways): picture left, words right, everything smaller */
+@media (max-height: 520px) and (orientation: landscape) {
+  .menu { padding: 10px 16px; }
+  .menu h1 { font-size: 15px; margin: 2px 0 6px; }
+  .menu .sub { font-size: 14px; margin-bottom: 6px; }
+  button.big { min-height: 44px; padding: 6px 14px; font-size: 16px; }
+  .menu-btns { gap: 6px; margin-top: 6px; }
+  .menu.bday { width: min(96vw, 820px); }
+  .bday-grid { display: grid; grid-template-columns: 44% 1fr; gap: 14px; align-items: center; text-align: left; }
+  .bday p { font-size: 15px; margin: 4px 0; }
+  .card.clue { padding: 10px 18px; }
+  .clue-text { font-size: 24px; }
+  .clue-art .ico { width: 40px; height: 32px; margin: 4px 0 0; }
+  .binder { grid-template-columns: repeat(6, 1fr); }
+  .tcg { width: min(60vw, 260px); } .tcg-art { height: 90px; } .tcg-art img { height: 80px; }
+}
 
 /* ---------- touch pad ---------- */
 #pad { position: fixed; inset: auto 0 0 0; height: 0; z-index: 25; pointer-events: none; }
@@ -247,3 +279,18 @@ button.big .note { display: block; font-size: 13px; font-weight: 600; opacity: .
   bottom: calc(max(14px, env(safe-area-inset-bottom)) + 120px);
 }
 #rotate[hidden] { display: none; }
+
+/* ---------- card binder ---------- */
+.binder-title { font-family: var(--pix); font-size: 11px; color: #a0681a; margin: 16px 0 8px; }
+.binder-title span { color: var(--ink); }
+.binder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.bcard { aspect-ratio: 5 / 7; border: 2px dashed #d8c48c; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
+.bcard .bq { margin: auto; font-family: var(--pix); color: #d8c48c; font-size: 14px; }
+.bcard.got { border: 3px solid #ffcd3c; background: linear-gradient(160deg, #fff6c9, #ffd98a); }
+.bname { font-size: 9px; font-weight: 700; padding: 2px 3px 0; display: flex; justify-content: space-between; gap: 2px; white-space: nowrap; }
+.bname em { font-style: normal; color: #c0302a; }
+.bart { flex: 1; margin: 2px 3px; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(120deg, #bfe8ff, #ffe6f7, #fff8c4, #c9ffe0, #bfe8ff); background-size: 300% 300%; animation: holo 3s linear infinite; }
+.bart img { max-width: 80%; max-height: 80%; image-rendering: pixelated; }
+.bmove { font-size: 8px; font-weight: 700; text-align: center; padding: 0 2px 3px; }
+.card.clue { max-height: 92vh; overflow-y: auto; }

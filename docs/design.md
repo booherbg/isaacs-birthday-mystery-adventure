@@ -18,7 +18,7 @@ Birthday game for Isaac (turning 8). Reveals the trampoline coming to the new ho
 A moving-day journey from the current house to the new house. Family members are the hint-giving NPCs.
   0. Home: birthday morning in Isaac's room (Big Bunny rides in his backpack). Mom sets up the mystery.
      "A wild FREIDA appeared!" TCG-style gag (PET / TREAT / RUN) → Clue 1 "It's BIG!"
-  1. Neighborhood on his green/black scooter: collect cards, toy-car track ramps → Dad at the sandlot,
+  1. Neighborhood on his green/black scooter: collect cards, toy-car track ramps → Dad at Brunsdale Fields,
      Wii-Sports-style batting → Clue 2 "It's BOUNCY!" → Dad offers a path choice.
   2a. Skate Park (scooter): ramps + air tricks → mega-ramp grabs Clue 3 "It's in the BACKYARD!"
   2b. Red River Trail (bike): geese, pelicans, jumping fish → fishing with Mom, catfish has Clue 3.
