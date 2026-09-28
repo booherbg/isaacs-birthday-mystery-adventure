@@ -527,10 +527,9 @@ async function skateEnd(w) {
   w.p.face = 1;
   audio.sfx('cheer');
   await say('mom', `The judge has decided... that run gets a TEN! TEN! TEN!!!`);
-  if (w.score >= CREW_SCORE) await say('creeper', `SSSSSSICK! ${w.score} pointsss! You out-ssskated the whole CREEPER CREW!`);
-  else await say('creeper', `${w.score} pointsss... ssso close! But it's your BIRTHDAY, ssso... you WIN!`);
-  await say('creeper', "Here'sss the ssssecret: head to ISLAND PARK POOL. Ssssomeone there has Clue #3...");
-  await say('creeper', "Now if you'll exxxcuse us... we get a little EXCITED at birthdays...");
+  if (w.score >= CREW_SCORE) await say('creeper', `SSSSSSICK! ${w.score} pointsss! You out-ssskated the CREEPER CREW! Ssssecret: Clue #3 is at ISLAND PARK POOL...`);
+  else await say('creeper', `${w.score} pointsss... ssso close! But it's your BIRTHDAY, ssso you WIN! Ssssecret: Clue #3 is at ISLAND PARK POOL...`);
+  await say('creeper', "Now exxxcuse us... we get a little EXCITED at birthdays...");
   audio.sfx('hiss');
   await wait(1);
   audio.sfx('pop'); audio.sfx('horn');
@@ -852,10 +851,8 @@ async function reveal(w) {
   w.p.face = 1;
   await say('mom', 'SURPRISE!!! You made it!');
   await say('isaac', 'FREIDA?! How did YOU get here first?!');
-  audio.sfx('meow');
-  await say('freida', '...mrrp. (Freida does not explain.)');
-  await say('dad', "You found ALL THREE clues. It's BIG... it's BOUNCY... and it's in our new BACKYARD...");
-  await say('mom', 'Go on... OPEN IT!');
+  audio.sfx('meow'); w.pops.add('...MRRP.', w.npcs.freida.x, w.ground - 20, '#fff', 1, 1.6);
+  await say('dad', "You found ALL THREE clues. It's BIG... it's BOUNCY... it's in our new BACKYARD... go on, OPEN IT!");
   audio.stop();
   await w.playerTo(722, 40);
   setPad('action', { a: 'OPEN!' });
@@ -881,11 +878,10 @@ async function reveal(w) {
   await wait(3.2);
   await say('isaac', 'A TRAMPOLINE?!?! NO WAY!!! NO WAAAAY!!!');
   await say('mom', `HAPPY 8th BIRTHDAY, ${K}! We love you SO much!`);
+  audio.sfx('bark', { n: 3 }); w.pops.add('ARF ARF ARF!', w.dog.x, w.dog.y - 18, '#fff', 1, 1.6);
   await say('dad', CONFIG.moveLine);
-  await say('dad', 'And remember... with great BOUNCE comes great responsibility!');
-  await say('sunny', 'ARF ARF ARF!!! (Sunny wants to bounce too!)');
-  await say('freida', '...mrrrp. (Freida approves. Probably.)');
-  await say('dad', "Well? What are you waiting for? JUMP ON IT!");
+  audio.sfx('purr'); w.pops.add('...mrrp. (approved)', w.npcs.freida.x, w.ground - 20, '#fff', 1, 1.8);
+  await say('dad', "With great BOUNCE comes great responsibility... now what are you waiting for? JUMP ON IT!");
   clearInterval(party);
   // Big Bunny calls first bounce
   w.bunnyHop = { x: 752, y: w.ground - 40, vy: -120, t: 0 };

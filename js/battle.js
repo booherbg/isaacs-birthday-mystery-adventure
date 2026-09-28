@@ -195,27 +195,24 @@ async function freidaScript(S) {
 async function catfishScript(S) {
   // First bite: a mooneye (or is it a goldeye?)
   S.F = FOES.mooneye; S.foe.hidden = true;
-  await say('narrator', `${K} casts the line out by the snag... plip! The catfish bell is clipped on the rod tip.`);
+  await say('narrator', `${K} casts out by the snag... plip! (The catfish bell is clipped on the rod tip.)`);
   await wait(1.1);
-  S.bell = 1; audio.sfx('bell');
-  await say('narrator', 'DING-A-LING! Something is nibbling!');
+  S.bell = 1.2; audio.sfx('bell'); setTimeout(() => audio.sfx('bell'), 300);
+  await wait(0.9);
   S.foe.shake = 0.8; audio.sfx('splash');
-  await wait(0.5);
+  await wait(0.4);
   await appear(S);
-  await say('mom', 'A bite! Reel it in, reel it in!');
   await S.startReel(6);
   await caught(S);
-  await say('narrator', 'Gotcha! The MOONEYE was caught!');
-  await say('mom', "Look at that big golden eye! Goldeye or mooneye? Honestly... they're TWINS.");
-  await say('mom', 'Catch and release! ...Cast again. I just saw something HUGE swirl by the snag!');
+  await say('narrator', 'Gotcha! A MOONEYE!');
+  await say('mom', "Look at that golden eye! Goldeye or mooneye? They're TWINS. Catch and release... now cast again — something HUGE just swirled by the snag!");
   S.foe.slide = 0; S.foe.hidden = true; S.reel = null; S.love = 0; audio.sfx('splash');
   await wait(0.9);
   // Second bite: the big one
   S.F = FOES.catfish;
-  await say('narrator', `${K} casts again... plip!`);
+  await wait(0.8);
+  S.bell = 2; audio.sfx('bell'); setTimeout(() => audio.sfx('bell'), 300); setTimeout(() => audio.sfx('bell'), 650);
   await wait(1.2);
-  S.bell = 1.5; audio.sfx('bell'); setTimeout(() => audio.sfx('bell'), 350);
-  await say('narrator', 'DING-A-LING-A-LING!!! The bell is going CRAZY!');
   S.foe.shake = 0.8; audio.sfx('splash'); game.shake = 3;
   await wait(0.5);
   await appear(S);
@@ -232,10 +229,8 @@ async function catfishScript(S) {
   audio.play('win', () => audio.play('river'));
   await say('narrator', 'Gotcha! The CHANNEL CATFISH was caught!');
   if (!save.data.tramp.hats.includes('fishing')) { save.data.tramp.hats.push('fishing'); save.flush(); toast('🎣 New hat unlocked for Trampoline Time: FISHING HAT!', 3500); }
-  await say('mom', "THAT'S THE BIGGEST CATFISH I'VE EVER SEEN IN THE RED RIVER!");
-  await say('mom', "Wait... there's a NOTE in its mouth!");
-  await say('isaac', `It says... "Clue #3 is at ISLAND PARK POOL!"`);
-  await say('mom', "Catch and release! Bye, big guy! ...Go on — I'll meet you there after these pelicans.");
+  await say('mom', "THE BIGGEST CATFISH IN THE RED RIVER! ...Wait. There's a NOTE in its mouth!");
+  await say('isaac', `"Clue #3 is at ISLAND PARK POOL!" ...Catch and release! Bye, big guy!`);
   S.foe.slide = 0; S.foe.hidden = true; audio.sfx('splash');
   await wait(0.5);
   afterBattle('catfish');
@@ -250,10 +245,9 @@ const SUNNY_MOVES = [
 ];
 async function sunnyScript(S) {
   await appear(S);
-  await say('narrator', 'SUNNY used SPLASH!');
   S.foe.hop = 1; audio.sfx('splash');
   S.parts.burst(S.foe.x, S.foe.y, 40, { colors: ['#8fdcff', '#ffffff', '#35a8e8'], speed: 140, g: 300, up: 80 });
-  await say('narrator', `...${K} is SOAKED!`);
+  await say('narrator', `SUNNY used SPLASH! ...${K} is SOAKED!`);
   let turn = 0;
   while (S.love < S.loveMax) {
     const c = await choose('narrator', `What will ${K} do?`, ['🖐️ BELLY RUB', '🦴 TREAT', '🎾 FETCH']);

@@ -24,9 +24,10 @@ export function battingScene() {
       this.run().catch((e) => console.error(e));
     },
     async run() {
-      await wait(0.6);
+      await wait(0.4);
       toast(input.touchMode ? 'Tap SWING when the ball reaches the glowing spot!' : 'Press SPACE (or A) to swing when the ball hits the glowing spot!', 3200);
       setPad('action', { a: 'SWING!' });
+      await wait(1.8);
       while (!this.hr) {
         this.state = 'wait';
         await wait(0.7);
@@ -56,13 +57,14 @@ export function battingScene() {
         if (b.y > CONTACT_Y + 2) b.y = CONTACT_Y + 2;
         if (b.x < 30) { b.done = true; this.strike('STRIKE!'); }
       }
-      if (this.state === 'pitch' && this.swing === 0 && (input.aPressed || input.tapPressed || input.bPressed) && b && !b.hit) {
+      this.cool = Math.max(0, (this.cool || 0) - dt);
+      if (this.state === 'pitch' && this.swing === 0 && this.cool <= 0 && (input.aPressed || input.tapPressed || input.bPressed) && b && !b.hit) {
         this.swing = 0.28; audio.sfx('whoosh');
         const dx = b.x - CONTACT_X;
         if (b.auto && b.x < 185) this.hit('hr'); // Dad's meatball: any swing connects
         else if (Math.abs(dx) <= b.win) this.hit('hr');
         else if (Math.abs(dx) <= b.win * 2.2) this.hit('foul', dx);
-        else { this.pops.add(dx > 0 ? 'TOO EARLY!' : 'TOO LATE!', 70, 52, '#fff'); }
+        else { this.pops.add(dx > 0 ? 'TOO EARLY!' : 'TOO LATE!', 70, 52, '#fff'); this.cool = 0.5; }
       }
       if (b && b.hit) {
         b.x += b.vx * dt; b.y += b.vy * dt; b.vy += (b.hit === 'hr' ? 40 : 300) * dt; b.spin += dt * 30;
@@ -119,14 +121,14 @@ export function battingScene() {
       A.treeLine(0, 0, 50, '#5aa05a', '#4a8c4c');
       // outfield fence + neighbors' houses peeking
       rect(0, 78, W, 16, '#2c7a34'); rect(0, 78, W, 2, '#ffde5c');
-      const msg = 'HAPPY BIRTHDAY ' + K + '!'; pixelText(msg, 142 - textWidth(msg) / 2, 84, '#ffde5c');
+      const msg = 'HAPPY BIRTHDAY ' + K + '!'; pixelText(msg, 142 - textWidth(msg) / 2, 81, '#ffde5c');
       rect(0, 94, W, 24, '#6fc25a');
       for (let x = 0; x < W; x += 16) rect(x, 94, 8, 24, '#65b651');
       rect(0, GROUND, W, H, '#c9925a');
       ellipse(212, GROUND + 1, 26, 4, '#b8804a');
       rect(70, GROUND, 12, 2, '#fff');
       // Sunny + Freida spectating
-      G.save(); G.translate(150, GROUND); G.scale(2, 2); spr(SPR.sunny.sit, -10, -16, true); G.restore();
+      G.save(); G.translate(174, GROUND); G.scale(2, 2); spr(SPR.sunny.sit, -10, -16, true); G.restore();
       // his skateboard + bike leaning on the fence, ready for the next leg
       rect(236, 70, 3, 22, '#2a1f33'); rect(236, 71, 2, 20, '#e8752a');
       G.strokeStyle = '#2a1f33'; G.lineWidth = 1; for (const bx of [6, 24]) { G.beginPath(); G.arc(bx, 86, 7, 0, Math.PI * 2); G.stroke(); } rect(6, 79, 18, 2, '#4cb944'); rect(20, 74, 2, 6, '#2a1f33');
@@ -160,7 +162,7 @@ export function battingScene() {
         for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, r = Math.min(f.t, 0.8) * 40; rect(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r + f.t * f.t * 10, 2, 2, f.c); }
       }
       this.parts.draw(); this.pops.draw();
-      if (this.misses && !this.hr) pixelText('SWINGS ' + this.misses, 8, 8, '#fff', 1, '#2a1f33');
+      if (this.misses && !this.hr) pixelText('STRIKES ' + this.misses, 8, 8, '#fff', 1, '#2a1f33');
     },
   };
   return S;

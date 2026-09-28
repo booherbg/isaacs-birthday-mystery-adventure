@@ -20,11 +20,11 @@ export const HATS = [
   { id: 'party', name: 'Party Hat', need: 'Starter hat' },
   { id: 'pika', name: 'Pika Hat', need: "Isaac's own hat!" },
   { id: 'none', name: 'No Hat', need: 'Just curls' },
-  { id: 'cap', name: 'Ball Cap', need: 'Score 800', test: (r) => r.score >= 800 },
-  { id: 'bunny', name: 'Big Bunny Ears', need: 'Reach the clouds', test: (r) => r.height >= 385 },
-  { id: 'spidey', name: 'Spidey Mask', need: 'Score 2,000', test: (r) => r.score >= 2000 },
-  { id: 'pup', name: 'Pup Fire Helmet', need: 'Hit a x8 combo', test: (r) => r.combo >= 8 },
-  { id: 'diamond', name: 'Diamond Helmet', need: 'Score 4,000', test: (r) => r.score >= 4000 },
+  { id: 'cap', name: 'Ball Cap', need: '5 PERFECT landings in a row', test: (r) => r.perfStreak >= 5 },
+  { id: 'bunny', name: 'Big Bunny Ears', need: 'Bounce up to SKY ZONE', test: (r) => r.height >= 385 },
+  { id: 'spidey', name: 'Spidey Mask', need: 'Land a DOUBLE flip', test: (r) => r.flips >= 2 },
+  { id: 'pup', name: 'Pup Fire Helmet', need: 'Hit a x5 combo', test: (r) => r.combo >= 5 },
+  { id: 'diamond', name: 'Diamond Helmet', need: 'Land a TRIPLE flip or a 720', test: (r) => r.flips >= 3 || r.spins >= 2 },
   { id: 'crown', name: 'Space Crown', need: 'Bounce to SPACE', test: (r) => r.height >= 800 },
   { id: 'collector', name: 'Card Collector Cap', need: 'Fill the Card Binder (story mode)' },
   { id: 'fishing', name: 'Fishing Hat', need: 'Catch the big catfish (river path)' },
@@ -88,15 +88,19 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         if (p.contact <= 0) this.launch();
       } else {
         // steering + gentle assist toward the middle
-        const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-        if (dir) { p.vx = clamp(p.vx + dir * 300 * dt, -115, 115); p.face = dir; }
+        const dir = this.noSteer > 0 ? 0 : (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        this.noSteer = Math.max(0, (this.noSteer || 0) - dt);
+        if (dir) { p.vx = clamp(p.vx + dir * 260 * dt, -70, 70); p.face = dir; }
         else p.vx += clamp((CX - p.x) * 2.2, -90, 90) * dt;
         p.vx *= 1 - 0.6 * dt;
         // tricks (not in the landing window)
         const tLand = this.timeToMat();
         const nearLand = p.vy > 0 && tLand < 0.2;
         if (!nearLand) {
-          if (input.aPressed || input.tapPressed) {
+          if ((input.aPressed || input.tapPressed) && p.vy > 0 && tLand < p.flipT + FLIP_T * 0.9) {
+            this.lastA = game.t; // too late for another flip: count it as timing the landing
+          } else if (input.aPressed || input.tapPressed) {
+            this.noSteer = 0.25;
             if (p.flips.length < 6) {
               const front = (input.right && p.face > 0) || (input.left && p.face < 0);
               p.flips.push(front ? 'F' : 'B');
@@ -117,6 +121,11 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         const alt = MAT - p.y;
         if (alt > this.bestHeight) this.bestHeight = alt;
         this.checkMilestones(alt);
+        if (p.y > MAT - 46 && Math.abs(p.x - CX) > HALF + 2) {
+          const side = Math.sign(p.x - CX);
+          p.x = CX + side * (HALF + 2); p.vx = -side * Math.max(40, Math.abs(p.vx) * 0.6);
+          if (!this.netT || game.t - this.netT > 0.4) { this.netT = game.t; audio.sfx('boing', { p: 1 }); this.pops.add('BOING!', p.x, p.y - 30, '#8fe8ff'); }
+        }
         if (p.vy > 0 && p.y >= MAT) {
           if (Math.abs(p.x - CX) <= HALF + 4) this.land();
           else if (p.y >= GROUND) this.oof();
@@ -146,7 +155,11 @@ export function trampolineScene({ story = false, timed = true } = {}) {
         this.combo = 0; this.power = Math.max(3, this.power - 2); p.bonked = true; game.shake = 2;
       } else if (p.flips.length || p.spins || p.worm) {
         const { name, pts } = trickName(p);
-        this.combo = Math.min(8, this.combo + 1);
+        const repeat = name === this.lastTrick;
+        this.lastTrick = name;
+        if (!repeat) this.combo = Math.min(8, this.combo + 1);
+        this.maxFlips = Math.max(this.maxFlips || 0, p.flips.length);
+        this.maxSpins = Math.max(this.maxSpins || 0, p.spins);
         const mult = Math.max(1, this.combo);
         this.score += pts * mult; this.tricksDone++;
         this.pops.add(name, p.x, p.y - 44, '#ffde5c', 1, 1.2);
@@ -164,12 +177,15 @@ export function trampolineScene({ story = false, timed = true } = {}) {
     launch() {
       const p = this.p;
       if (p.perfect && !p.bonked) {
+        this.perfStreak = (this.perfStreak || 0) + 1; this.bestPerfStreak = Math.max(this.bestPerfStreak || 0, this.perfStreak);
         this.power = Math.min(MAXP, this.power + 1);
         this.score += 10 * Math.max(1, this.combo);
-        this.pops.add('PERFECT!', p.x, p.y - 26, '#9fe35f');
+        this.pops.add('PERFECT!', p.x, p.y - 26, '#9fe35f', 1, 1);
+        this.parts.burst(p.x, MAT + 2, 14, { colors: ['#9fe35f', '#ffffff', '#ffde5c'], speed: 90, g: 120, life: 0.5 });
+        if (this.power >= 7) game.shake = 2;
         audio.sfx('perfect', { combo: this.power });
         this.fans = 1;
-      } else if (!p.bonked) this.power = Math.max(3, this.power - 1);
+      } else if (!p.bonked) { this.power = Math.max(3, this.power - 1); this.perfStreak = 0; }
       p.bonked = false; p.perfect = false;
       p.vy = -Math.sqrt(2 * GRAV * HEIGHTS[this.power]);
       audio.sfx('boing', { p: this.power });
@@ -225,8 +241,9 @@ export function trampolineScene({ story = false, timed = true } = {}) {
       this.fans = Math.max(0, this.fans - dt * 2);
     },
     updateCam(dt) {
-      const target = Math.min(0, this.p.y - 64);
-      this.camY = lerp(this.camY, target, Math.min(1, dt * 6));
+      const p = this.p, falling = p.vy > 0;
+      const target = Math.min(0, p.y - 64 + (falling ? Math.min(50, p.vy * 0.1) : 0));
+      this.camY = lerp(this.camY, target, Math.min(1, dt * (falling ? 18 : 6)));
     },
     exit() { tip(''); },
     async finish() {
@@ -263,7 +280,7 @@ function trickName(p) {
     if (n) { name = (m > 1 ? deg + ' ' : 'TWISTING ') + name; pts += m * 80 + 50; }
     else { name = deg + '!'; pts += m * 80 + (m > 1 ? 40 : 0); }
   }
-  if (p.worm) { name = name ? name + ' + WORM!' : 'THE WORM!'; pts += 150; }
+  if (p.worm) { name = name ? name + ' + WORM!' : 'THE WORM!'; pts += 60; }
   return { name: name + (name.endsWith('!') ? '' : '!'), pts };
 }
 
@@ -380,10 +397,10 @@ export function drawHat(id, g = G) {
 // ---------------- results / menu ----------------
 async function showResults(S) {
   const t = save.data.tramp;
-  const run = { score: S.score, height: S.bestHeight, combo: S.bestCombo };
+  const run = { score: S.score, height: S.bestHeight, combo: S.bestCombo, perfStreak: S.bestPerfStreak || 0, flips: S.maxFlips || 0, spins: S.maxSpins || 0 };
   const newRec = S.score > t.high;
   t.high = Math.max(t.high, S.score); t.bestHeight = Math.max(t.bestHeight, S.bestHeight); t.bestCombo = Math.max(t.bestCombo, S.bestCombo); t.plays++;
-  const unlocked = HATS.filter((h) => h.test && !t.hats.includes(h.id) && h.test(run));
+  const unlocked = HATS.filter((h) => h.test && !t.hats.includes(h.id) && h.test(run)).slice(0, 2); // at most 2 per round: always something to chase
   for (const h of unlocked) t.hats.push(h.id);
   save.flush();
   if (newRec) audio.sfx('record'); else if (unlocked.length) audio.sfx('unlock');
