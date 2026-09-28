@@ -171,6 +171,7 @@ const SFX = {
     osc('sine', f, t + Math.random() * 0.1, d + 0.02, 0.018, { to: f * (1.3 + Math.random() * 0.6), attack: 0.001, release: d });
   },
   snareroll: (t, o) => { const n = 4 + (o.n || 1) * 3; for (let i = 0; i < n; i++) noise(t + i * 0.045, 0.04, 0.05 + i * 0.012, { type: 'highpass', f: 1500 }); },
+  bell: (t) => { for (let i = 0; i < 3; i++) { osc('sine', 2350, t + i * 0.09, 0.22, 0.07); osc('sine', 3120, t + i * 0.09 + 0.01, 0.16, 0.035); } },
   worm: (t) => { for (let i = 0; i < 4; i++) osc('p25', 330 + i * 60, t + i * 0.1, 0.09, 0.1, { to: 250 + i * 60 }); },
   unlock: (t) => arp(t, ['C6', 'E6', 'G6', 'C7'], 0.07, 'p50', 0.12),
 };

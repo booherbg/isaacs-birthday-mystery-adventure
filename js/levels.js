@@ -653,7 +653,7 @@ async function fishing(w) {
   await w.playerTo(1530, 50);
   w.p.face = 1;
   await say('mom', `${K}! Welcome to LION'S PARK! ...Shhh — the AMERICAN WHITE PELICANS are out. I count SEVENTEEN!`);
-  await say('mom', "I brought your fishing rod. Bird watching is great... but I REALLY want to watch you catch a big one!");
+  await say('mom', "I brought your rod, your vest, AND your lucky FISHING HAT. Bird watching is great... but I REALLY want to watch you catch a big one!");
   await say('isaac', 'YES! Gimme the rod!');
   stopBrook();
   fadeTo(() => setScene(battleScene('catfish')), 'flash');

@@ -294,3 +294,20 @@ button.big .note { display: block; font-size: 13px; font-weight: 600; opacity: .
 .bart img { max-width: 80%; max-height: 80%; image-rendering: pixelated; }
 .bmove { font-size: 8px; font-weight: 700; text-align: center; padding: 0 2px 3px; }
 .card.clue { max-height: 92vh; overflow-y: auto; }
+
+/* ---------- hat picker ---------- */
+.hatgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin: 6px 0 4px; }
+.hat-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 3px solid var(--ink); border-radius: 12px;
+  background: #fff; color: var(--ink); box-shadow: 0 3px 0 var(--ink); font-size: 14px; }
+.hat-tile img { width: 56px; height: 88px; image-rendering: pixelated; }
+.hat-tile small { font-size: 11px; font-weight: 600; opacity: .75; line-height: 1.2; }
+.hat-tile.on { background: var(--sun); }
+.hat-tile.sel { outline: 3px solid var(--blue); outline-offset: 2px; }
+.hat-tile.locked { background: #ece8dc; border-style: dashed; box-shadow: none; }
+.hat-tile.locked img { filter: grayscale(1) brightness(.55) contrast(.8); }
+.hat-tile.locked b { opacity: .6; }
+.hat-tile.nope { animation: nope .35s; }
+@keyframes nope { 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+@media (max-height: 520px) and (orientation: landscape) { .hatgrid { grid-template-columns: repeat(5, 1fr); } .hat-tile img { width: 40px; height: 63px; } .menu.hatmenu { width: min(96vw, 820px); } }
+
+.topbtns.dimmed { display: none; }

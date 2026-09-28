@@ -65,7 +65,8 @@ start({
     pollInput();
     if (input.touchMode !== lastTouch) { lastTouch = input.touchMode; layout(); }
     if (input.startPressed && game.scene?.name !== 'title') pauseMenu();
-    const menuOpen = !document.getElementById('overlay').hidden;
+    const ov = document.getElementById('overlay'), menuOpen = !ov.hidden;
+    document.getElementById('topbtns').classList.toggle('dimmed', menuOpen && !ov.classList.contains('clear'));
     const playing = game.scene && game.scene.name !== 'title' && !menuOpen;
     const storyScene = playing && game.scene.name !== 'tramp';
     if (cluesBtn.hidden === storyScene) cluesBtn.hidden = !storyScene;

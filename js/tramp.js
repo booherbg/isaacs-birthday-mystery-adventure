@@ -1,9 +1,9 @@
 // TRAMPOLINE TIME — Sky Zone in the new backyard. Time your landings, stack tricks, combo up to x8.
-import { W, H, G, game, rect, tri, circle, ellipse, spr, sprRot, pixelText, textWidth, wait, until, Particles, Pops, clamp, lerp, rand, pick, CONFETTI, setScene, fadeTo } from './engine.js';
+import { W, H, G, game, rect, tri, circle, ellipse, spr, sprRot, pixelText, textWidth, wait, until, Particles, Pops, clamp, lerp, rand, pick, CONFETTI, setScene, fadeTo, offscreen } from './engine.js';
 import { SPR } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { say, banner, hud, setPad, toast, menu, icon, tip } from './ui.js';
+import { say, banner, hud, setPad, toast, menu, icon, tip, overlay } from './ui.js';
 import { drawWorm } from './world.js';
 import * as A from './art.js';
 import { CONFIG } from './config.js';
@@ -18,6 +18,7 @@ const FLIP_T = 0.52, SPIN_T = 0.42;
 
 export const HATS = [
   { id: 'party', name: 'Party Hat', need: 'Starter hat' },
+  { id: 'pika', name: 'Pika Hat', need: "Isaac's own hat!" },
   { id: 'none', name: 'No Hat', need: 'Just curls' },
   { id: 'cap', name: 'Ball Cap', need: 'Score 800', test: (r) => r.score >= 800 },
   { id: 'bunny', name: 'Big Bunny Ears', need: 'Reach the clouds', test: (r) => r.height >= 385 },
@@ -26,6 +27,7 @@ export const HATS = [
   { id: 'diamond', name: 'Diamond Helmet', need: 'Score 4,000', test: (r) => r.score >= 4000 },
   { id: 'crown', name: 'Space Crown', need: 'Bounce to SPACE', test: (r) => r.height >= 800 },
   { id: 'collector', name: 'Card Collector Cap', need: 'Fill the Card Binder (story mode)' },
+  { id: 'fishing', name: 'Fishing Hat', need: 'Catch the big catfish (river path)' },
 ];
 
 const ITEMS = [
@@ -354,7 +356,23 @@ export function drawHat(id, g = G) {
   if (id === 'spidey') { r(-5, -10, 12, 12, '#e8483f'); for (let i = 0; i < 4; i++) r(-5, -9 + i * 3, 12, 1, '#7a1c24'); r(0, -10, 1, 12, '#7a1c24'); r(-3, -5, 3, 3, '#fff'); r(3, -5, 3, 3, '#fff'); }
   if (id === 'diamond') { r(-7, -14, 14, 7, '#5cd6ff'); r(-7, -14, 14, 1, '#d4f6ff'); r(-7, -7, 2, 5, '#5cd6ff'); r(5, -7, 2, 5, '#5cd6ff'); r(-4, -12, 2, 2, '#d4f6ff'); r(2, -11, 2, 2, '#2aa6d6'); }
   if (id === 'pup') { r(-7, -15, 14, 6, '#e8483f'); r(-8, -10, 16, 2, '#c0302a'); r(-2, -14, 4, 4, '#ffde5c'); r(-1, -13, 2, 2, '#e8483f'); }
-  if (id === 'bunny') { r(-5, -26, 3, 14, '#ffffff'); r(-4, -24, 1, 10, '#ff9eaa'); r(2, -27, 3, 15, '#ffffff'); r(3, -25, 1, 11, '#ff9eaa'); r(-3, -26, 1, 1, '#9aa3b8'); }
+  if (id === 'bunny') {
+    r(-6, -25, 5, 16, '#2a1f33'); r(1, -26, 5, 17, '#2a1f33');
+    r(-5, -24, 3, 15, '#f7f3ea'); r(-4, -22, 1, 10, '#ff9eaa'); r(2, -25, 3, 16, '#f7f3ea'); r(3, -23, 1, 11, '#ff9eaa');
+  }
+  if (id === 'pika') {
+    const Y = '#ffd23f', O = '#2a1f33';
+    r(-7, -22, 4, 8, O); r(-6, -21, 2, 6, Y); r(-6, -22, 2, 2, O); r(3, -22, 4, 8, O); r(4, -21, 2, 6, Y); r(4, -22, 2, 2, O);
+    r(-9, -16, 18, 7, O); r(-8, -15, 16, 6, Y);
+    r(-9, -10, 4, 11, O); r(-8, -10, 2, 10, Y); r(5, -10, 4, 11, O); r(6, -10, 2, 10, Y);
+    r(-4, -14, 2, 2, O); r(2, -14, 2, 2, O); r(-1, -12, 2, 1, '#ff7d98'); r(-7, -12, 2, 2, '#e8483f'); r(5, -12, 2, 2, '#e8483f');
+    r(-8, 1, 1, 5, Y); r(7, 1, 1, 5, Y); r(-9, 6, 3, 1, '#e8483f'); r(-9, 7, 3, 1, '#ffffff'); r(6, 6, 3, 1, '#e8483f'); r(6, 7, 3, 1, '#ffffff');
+  }
+  if (id === 'fishing') {
+    r(-11, -12, 22, 3, '#2a1f33'); r(-10, -11, 20, 1, '#7a8456'); r(-10, -10, 20, 1, '#4d5636');
+    r(-7, -19, 14, 8, '#2a1f33'); r(-6, -18, 12, 7, '#7a8456'); r(-6, -13, 12, 1, '#5e6842'); r(-3, -16, 3, 1, '#c8d94a'); r(0, -16, 1, 1, '#2a4a8a');
+    r(-7, -9, 1, 9, '#2a1f33'); r(6, -9, 1, 9, '#2a1f33'); r(-2, 1, 4, 1, '#2a1f33');
+  }
   if (id === 'collector') { const c = ['#ff7d98', '#ffde5c', '#8fe8ff', '#9fe35f']; for (let i = 0; i < 11; i++) r(-6 + i, -15 + (i < 1 || i > 9 ? 1 : 0), 1, 5, c[(i + Math.floor(Date.now() / 150)) % 4]); r(4, -11, 5, 2, '#ffcd3c'); r(-1, -14, 2, 2, '#fff'); }
   if (id === 'crown') { r(-5, -16, 11, 5, '#ffcd3c'); r(-5, -19, 2, 3, '#ffcd3c'); r(0, -20, 2, 4, '#ffcd3c'); r(4, -19, 2, 3, '#ffcd3c'); r(0, -15, 2, 2, '#e8483f'); r(-4, -14, 1, 1, '#5cd6ff'); r(4, -14, 1, 1, '#5cd6ff'); }
 }
@@ -395,16 +413,26 @@ async function showResults(S) {
   else { const { titleScene } = await import('./title.js'); fadeTo(() => setScene(titleScene())); }
 }
 
+function hatPreview(id) {
+  const c = offscreen(28, 44, (g) => { g.save(); g.translate(14, 30); g.drawImage(SPR.isaac.idle, -8, -12); drawHat(id, g); g.restore(); });
+  return c.toDataURL();
+}
 export async function hatPicker() {
   const t = save.data.tramp;
-  const btns = HATS.map((h) => {
-    const ok = t.hats.includes(h.id);
-    return { v: ok ? h.id : 'locked:' + h.id, label: `${h.name}${t.hat === h.id ? ' ✓' : ''}<span class="note">${ok ? 'Unlocked' : '🔒 ' + h.need}</span>`, cls: ok ? '' : 'locked' };
-  });
-  while (true) {
-    const v = await menu({ title: 'PICK A HAT', sub: 'Unlock more by bouncing!', buttons: btns, cls: 'hatmenu' });
-    if (!v || String(v).startsWith('locked')) { toast('Keep bouncing to unlock that one!'); if (!v) return; continue; }
-    t.hat = v; save.flush(); audio.sfx('select');
-    return;
-  }
+  const tiles = HATS.map((h) => {
+    const ok = t.hats.includes(h.id), on = t.hat === h.id;
+    return `<button class="hat-tile ${ok ? '' : 'locked'} ${on ? 'on' : ''}" ${ok ? `data-v="${h.id}"` : `data-lock="${h.need}"`}>
+      <img src="${hatPreview(h.id)}" alt=""><b>${h.name}</b><small>${ok ? (on ? 'Wearing ✓' : 'Tap to wear') : '🔒 ' + h.need}</small></button>`;
+  }).join('');
+  const p = overlay(`<div class="menu pop hatmenu"><h1>PICK A HAT</h1>
+      <p class="sub">Unlock hats in Trampoline Time: score big, bounce high, land combos!</p>
+      <div class="hatgrid">${tiles}</div>
+      <div class="menu-btns"><button class="big" data-v="done">Done</button></div></div>`, { cls: 'dim' });
+  document.querySelectorAll('#overlay [data-lock]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+    audio.sfx('bump'); toast('🔒 To unlock: ' + b.dataset.lock, 2200);
+  }));
+  const v = await p;
+  if (v && v !== 'done') { t.hat = v; save.flush(); audio.sfx('select'); toast('Now wearing: ' + HATS.find((h) => h.id === v).name + '!', 1600); }
 }

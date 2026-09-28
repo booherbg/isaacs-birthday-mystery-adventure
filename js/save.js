@@ -3,13 +3,17 @@ const KEY = 'isaac-adventure-v1';
 const DEFAULT = () => ({
   stage: 0, path: null, done: false, paths: {},
   cards: {},
-  tramp: { high: 0, bestHeight: 0, bestCombo: 0, plays: 0, hat: 'party', hats: ['party', 'none'] },
+  tramp: { high: 0, bestHeight: 0, bestCombo: 0, plays: 0, hat: 'party', hats: ['party', 'none', 'pika'] },
 });
 
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
-    if (d && typeof d === 'object') return Object.assign(DEFAULT(), d, { tramp: Object.assign(DEFAULT().tramp, d.tramp) });
+    if (d && typeof d === 'object') {
+      const out = Object.assign(DEFAULT(), d, { tramp: Object.assign(DEFAULT().tramp, d.tramp) });
+      if (!out.tramp.hats.includes('pika')) out.tramp.hats.push('pika');
+      return out;
+    }
   } catch {}
   return DEFAULT();
 }
