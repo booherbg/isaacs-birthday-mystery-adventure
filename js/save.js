@@ -25,5 +25,5 @@ export const save = {
     this.flush();
   },
   flush() { try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch {} },
-  reset() { const t = this.data.tramp, done = this.data.done; this.data = Object.assign(DEFAULT(), { tramp: t, done }); this.flush(); },
+  reset() { const { tramp, done, binder } = this.data; this.data = Object.assign(DEFAULT(), { tramp, done, binder }); this.flush(); },
 };

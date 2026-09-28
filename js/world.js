@@ -148,7 +148,8 @@ export class World {
     // hidden interactions: stand next to something fun and press A
     this.near = null;
     if (!this.locked) for (const it of this.inter) if (!it.hidden && Math.abs(p.x - it.x) < it.r && p.onGround && Math.abs(p.y - (it.floor ?? this.ground)) < 6) this.near = it;
-    padLabel(this.near && !ui.busy ? this.near.label : this.baseLabel);
+    const wantLabel = this.near && !ui.busy ? this.near.label : this.baseLabel;
+    if (wantLabel !== this.lastLabel) { this.lastLabel = wantLabel; padLabel(wantLabel); }
     let used = false;
     if (control && this.near && input.aPressed && Math.abs(p.vx) < 40) {
       used = true; this.near.uses++; p.vx = 0;

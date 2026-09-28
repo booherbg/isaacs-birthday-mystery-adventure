@@ -110,7 +110,7 @@ export function battingScene() {
         `🛹 DIKE EAST SKATE PARK${done.skate ? ' ✓' : ''}`,
         `🚲 RED RIVER TRAIL${done.river ? ' ✓' : ''}`,
       ]);
-      await say('dad', c === 0 ? "The skate park! I brought your SKATEBOARD. Mom's judging the Creeper contest — go show 'em!" : "The river trail! Take your BIKE — Mom's bird watching at LION'S PARK, and she brought your fishing rod!");
+      await say('dad', c === 0 ? "The skate park! I brought your SKATEBOARD. Mom's judging the Creeper contest — go show 'em!" : "The river trail! Take your BIKE — Mom's bird watching at LIONS CONSERVANCY PARK, and she brought your fishing rod!");
       goStage(c === 0 ? 'skate' : 'river');
     },
     render() {

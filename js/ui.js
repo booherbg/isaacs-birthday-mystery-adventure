@@ -74,6 +74,13 @@ export function setPad(mode = 'move', { a = 'JUMP', b = null, down = 'worm' } = 
   el.hint.textContent = keys[mode] || '';
 }
 
+// What to call the buttons on this device (the Logitech Precision prints numbers 1-4).
+export function btnName(which = 'a') {
+  if (input.touchMode) return which === 'a' ? 'the big button' : 'SPIN';
+  const gp = [...(navigator.getGamepads?.() || [])].find((g) => g && g.connected);
+  if (gp) return gp.mapping === 'standard' ? (which === 'a' ? 'A' : 'B') : (which === 'a' ? 'button 2' : 'button 1');
+  return which === 'a' ? 'SPACE' : 'X';
+}
 // Relabel the A button without changing the pad mode (e.g. PLAY ♪ near the Toniebox).
 export function padLabel(a) { if (el.a.textContent !== a) el.a.textContent = a; }
 
@@ -142,7 +149,7 @@ export function say(who, text, { speed = 48 } = {}) {
   el.dialog.hidden = false;
   el.dialog.classList.remove('pop'); void el.dialog.offsetWidth; el.dialog.classList.add('pop');
   el.next.hidden = true;
-  el.next.textContent = input.touchMode ? 'NEXT ▶' : input.padConnected ? 'A ▶' : 'SPACE ▶';
+  el.next.textContent = input.touchMode ? 'NEXT ▶' : input.padConnected ? btnName('a').replace('button ', '') + ' ▶' : 'SPACE ▶';
   if (who === 'sunny') audio.sfx('bark', { n: 2 });
   if (who === 'freida') audio.sfx('meow');
   return new Promise((resolve) => { dlg = { who, sp, full: text, shown: 0, speed, resolve, done: false, age: 0 }; });
@@ -158,13 +165,13 @@ export function choose(who, text, options) {
     options.forEach((o, i) => {
       const b = document.createElement('button');
       b.className = 'choice'; b.innerHTML = o;
-      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); pickChoice(i); });
+      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (!dlg || dlg.age < 0.4) return; pickChoice(i); });
       el.choices.appendChild(b);
     });
     markChoice();
   });
 }
-function markChoice() { [...el.choices.children].forEach((b, i) => b.classList.toggle('sel', i === dlg.sel)); }
+function markChoice() { [...el.choices.children].forEach((b, i) => b.classList.toggle('sel', i === dlg.sel && !(input.touchMode && !dlg.nav))); }
 function pickChoice(i) {
   if (!dlg || !dlg.choices) return;
   audio.sfx('select');
@@ -185,9 +192,9 @@ function updateDialog(dt) {
   dlg.age += dt;
   if (dlg.choices) {
     const n = dlg.choices.length;
-    if (input.leftPressed || input.upPressed) { dlg.sel = (dlg.sel + n - 1) % n; audio.sfx('move'); markChoice(); }
-    if (input.rightPressed || input.downPressed) { dlg.sel = (dlg.sel + 1) % n; audio.sfx('move'); markChoice(); }
-    if ((input.aPressed || input.startPressed) && dlg.age > 0.25) pickChoice(dlg.sel);
+    if (input.leftPressed || input.upPressed) { dlg.nav = true; dlg.sel = (dlg.sel + n - 1) % n; audio.sfx('move'); markChoice(); }
+    if (input.rightPressed || input.downPressed) { dlg.nav = true; dlg.sel = (dlg.sel + 1) % n; audio.sfx('move'); markChoice(); }
+    if ((input.aPressed || input.startPressed) && !input.touchMode && dlg.age > 0.35) pickChoice(dlg.sel);
     return;
   }
   if (!dlg.done) {
@@ -289,7 +296,7 @@ export function foeCard({ who, name, hp, type, moves, flavor, color = '#ffcd3c' 
       ${moves.map(([m, dmg, d]) => `<div class="tcg-move"><b>${m}</b><span>${dmg}</span><small>${d}</small></div>`).join('')}
       <div class="tcg-flavor">${flavor}</div>
     </div>
-    <div class="tapnext light">tap / press A</div>`, { tapClose: true, minAge: 0.9, cls: 'dim' });
+    <div class="tapnext light">${input.touchMode ? 'tap to continue' : 'press ' + btnName('a')}</div>`, { tapClose: true, minAge: 0.9, cls: 'dim' });
 }
 
 export function menu({ title = '', sub = '', body = '', buttons = [], cls = '' }) {

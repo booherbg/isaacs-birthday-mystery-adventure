@@ -3,7 +3,7 @@ import { start, setScene, game } from './engine.js';
 import { pollInput, bindTouch, onFirstGesture, onPadConnect, input } from './input.js';
 import { audio } from './audio.js';
 import { buildSprites } from './sprites.js';
-import { layout, updateUI, toast, clueBook, ui } from './ui.js';
+import { layout, updateUI, toast, clueBook, ui, btnName } from './ui.js';
 import { titleScene, pauseMenu } from './title.js';
 import { goStage } from './levels.js';
 import { trampolineScene } from './tramp.js';
@@ -26,7 +26,7 @@ addEventListener('contextmenu', (e) => e.preventDefault());
 for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 let lastTouchEnd = 0;
-document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - lastTouchEnd < 320 && !e.target.closest('#overlay')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
+document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - lastTouchEnd < 320 && !e.target.closest('#overlay, button, #pad')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 const vp = document.querySelector('meta[name=viewport]');
 window.visualViewport?.addEventListener('resize', () => {
@@ -35,7 +35,7 @@ window.visualViewport?.addEventListener('resize', () => {
     setTimeout(() => { vp.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'); layout(); }, 60);
   }
 });
-onPadConnect(() => { toast('🎮 Controller connected! Press A to jump.'); layout(); });
+onPadConnect(() => { setTimeout(() => toast(`🎮 Controller connected! ${btnName('a')} = jump · ${btnName('b')} = spin`), 50); layout(); });
 
 const mute = $('#btn-mute');
 mute.classList.toggle('off', audio.muted);

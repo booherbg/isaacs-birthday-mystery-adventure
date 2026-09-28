@@ -70,7 +70,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #toast {
   position: absolute; left: 50%; bottom: 10px; transform: translate(-50%, 20px); opacity: 0; transition: .25s;
   background: rgba(20, 12, 40, .85); border: 2px solid #fff; border-radius: 999px; padding: 6px 14px;
-  font-size: clamp(12px, calc(var(--u) * 5), 18px); white-space: nowrap; pointer-events: none;
+  font-size: clamp(12px, calc(var(--u) * 5), 18px); white-space: normal; width: max-content; max-width: calc(100% - 20px); text-align: center; pointer-events: none;
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -311,3 +311,8 @@ button.big .note { display: block; font-size: 13px; font-weight: 600; opacity: .
 @media (max-height: 520px) and (orientation: landscape) { .hatgrid { grid-template-columns: repeat(5, 1fr); } .hat-tile img { width: 40px; height: 63px; } .menu.hatmenu { width: min(96vw, 820px); } }
 
 .topbtns.dimmed { display: none; }
+
+.touch .topbtns { gap: 8px; }
+.touch .topbtns button { width: 40px; height: 40px; font-size: 18px; }
+.portrait #hud { font-size: 12px; }
+.portrait #toast { position: fixed; bottom: auto; top: calc(var(--stage-bottom) + 8px); }

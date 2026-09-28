@@ -286,7 +286,7 @@ async function sunnyScript(S) {
   afterBattle('sunny');
 }
 
-// ---------------- Lion's Park on the Red River: the fishing vista ----------------
+// ---------------- Lions Conservancy Park on the Red River: the fishing vista ----------------
 let vista = null;
 function cottonwood(x, base, s, autumn) {
   rect(x - 3 * s, base - 46 * s, 6 * s, 46 * s, '#8c8074'); rect(x - 3 * s, base - 46 * s, 2 * s, 46 * s, '#a89c8f');

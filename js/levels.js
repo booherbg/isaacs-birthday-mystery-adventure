@@ -134,6 +134,8 @@ const room = {
     // Big Bunny on the bed
     if (!w.bunny.got) {
       spr(SPR.bunny, w.bunny.x - 4, w.bunny.y - 12 + Math.round(Math.sin(game.t * 3)));
+      const ay = w.bunny.y - 24 + Math.round(Math.sin(game.t * 5) * 2);
+      rect(w.bunny.x - 2, ay, 5, 1, '#ffde5c'); rect(w.bunny.x - 1, ay + 1, 3, 1, '#ffde5c'); rect(w.bunny.x, ay + 2, 1, 1, '#ffde5c');
       const p = w.p;
       if (Math.abs(p.x - w.bunny.x) < 12 && p.y < 112) {
         w.bunny.got = true; w.pack = true; audio.sfx('clue'); w.parts.sparkle(w.bunny.x, w.bunny.y - 6, 12);
@@ -541,10 +543,10 @@ async function skateEnd(w) {
 }
 
 // =====================================================================================
-// 3b. RED RIVER TRAIL — bike to Lion's Park; Mom (bird watching) watches Isaac fish
+// 3b. RED RIVER TRAIL — bike to Lions Conservancy Park; Mom (bird watching) watches Isaac fish
 // =====================================================================================
 const river = {
-  id: 'river', title: 'RED RIVER TRAIL', sub: "Bike to Lion's Park!", music: 'river', mode: 'bike',
+  id: 'river', title: 'RED RIVER TRAIL', sub: 'Bike to Lions Conservancy Park!', music: 'river', mode: 'bike',
   inter: [{ x: 706, y: 96, r: 16, label: 'LOOK', fn: async (w) => {
     w.locked = true; w.heronT = game.t;
     audio.sfx('select');
@@ -635,10 +637,10 @@ const river = {
       spr(img, x - 5, g.y - img.height - (g.fly ? 0 : Math.abs(Math.sin(game.t * 5 + g.x)) * 1), true);
       if (g.fly) rect(x - 2, g.y - 9 - (Math.floor(game.t * 10) % 2) * 3, 7, 1, '#2a1f33');
     }
-    // Lion's Park: Mom bird watching, rods and tackle ready for Isaac
+    // Lions Conservancy Park: Mom bird watching, rods and tackle ready for Isaac
     const mx = 1566 - cx;
     if (mx < W + 60) {
-      A.sign(mx - 116, w.ground, ["LION'S PARK"], { bg: '#2c7a34' });
+      A.sign(mx - 124, w.ground, ['LIONS CONSERVANCY', 'PARK'], { bg: '#2c7a34' });
       rect(mx + 10, w.ground - 6, 8, 6, '#e6e6e6'); rect(mx + 10, w.ground - 6, 8, 1, '#9aa3b8'); // bucket
       rect(mx + 20, w.ground - 5, 10, 5, '#3f9b3a'); rect(mx + 20, w.ground - 5, 10, 1, '#62bf4c'); // tackle box
       rect(mx + 30, w.ground - 30, 1, 30, '#6b4a2f'); rect(mx + 33, w.ground - 28, 1, 28, '#2a1f33'); // two rods
@@ -652,7 +654,7 @@ async function fishing(w) {
   w.locked = true; cardTally(w);
   await w.playerTo(1530, 50);
   w.p.face = 1;
-  await say('mom', `${K}! Welcome to LION'S PARK! ...Shhh — the AMERICAN WHITE PELICANS are out. I count SEVENTEEN!`);
+  await say('mom', `${K}! Welcome to LIONS CONSERVANCY PARK! ...Shhh — the AMERICAN WHITE PELICANS are out. I count SEVENTEEN!`);
   await say('mom', "I brought your rod, your vest, AND your lucky FISHING HAT. Bird watching is great... but I REALLY want to watch you catch a big one!");
   await say('isaac', 'YES! Gimme the rod!');
   stopBrook();

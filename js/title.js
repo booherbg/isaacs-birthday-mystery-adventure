@@ -3,7 +3,7 @@ import { W, H, G, game, rect, circle, spr, sprRot, setScene, fadeTo, offscreen, 
 import { SPR, PORTRAIT } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { overlay, menu, hud, setPad, toast, closeOverlay, clueBook } from './ui.js';
+import { overlay, menu, hud, setPad, toast, closeOverlay, clueBook, btnName } from './ui.js';
 import * as A from './art.js';
 import { CONFIG } from './config.js';
 import { save } from './save.js';
@@ -28,13 +28,20 @@ export function titleScene() {
           ? [{ v: 'continue', label: `▶ CONTINUE<span class="note">${STAGE_NAMES[STAGES[d.stage]] || ''}</span>`, cls: 'go' }, { v: 'new', label: '↺ Start over' }]
           : [{ v: 'new', label: '▶ START THE ADVENTURE', cls: 'go' }];
       const portrait = innerHeight > innerWidth;
-      const foot = input.touchMode && portrait ? 'Tip: turn your phone sideways for a bigger screen ↻' : '🎮 Got a controller? Plug it in and press a button. · Sound on! ♪';
+      const foot = input.touchMode ? (portrait ? 'Tip: turn your phone sideways for a bigger screen ↻' : 'Sound on! ♪') : '🎮 Got a controller? Plug it in and press a button. · Sound on! ♪';
       const v = await overlay(`
         <div class="title-wrap"><div class="logo">ISAAC'S<br class="pb"> <span>BIRTHDAY</span><br>MYSTERY<br class="pb"> ADVENTURE</div>
         <div class="tag">${d.done ? '★ MYSTERY SOLVED ★' : 'A MYSTERY IN 3 CLUES'}</div></div>
         <div class="title-btns">${btns.map((b) => `<button class="big ${b.cls || ''}" data-v="${b.v}">${b.label}</button>`).join('')}</div>
         <div class="title-foot">${foot}</div>`, { cls: 'clear' });
       audio.unlock();
+      if (input.touchMode && (v === 'new' || v === 'continue' || v === 'story' || v === 'tramp')) {
+        try { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch?.(() => {}); } catch {}
+      }
+      if (v === 'new' && started) {
+        const ok = await menu({ title: 'START OVER?', sub: 'This clears your clues and progress (your hats and cards stay).', buttons: [{ v: 'yes', label: '↺ Yes, start over' }, { v: 'no', label: '← Keep my progress', cls: 'go' }] });
+        if (ok !== 'yes') return this.menu();
+      }
       if (v === 'new') { save.reset(); goStage('room'); }
       else if (v === 'continue') goStage(STAGES[d.stage]);
       else if (v === 'story') { save.set({ stage: 0, path: null }); goStage('room'); }
@@ -47,7 +54,7 @@ export function titleScene() {
       const v = await menu({
         title: 'TRAMPOLINE TIME',
         sub: `High score: ${t.high} · Hats: ${t.hats.length - 1}/${HATS.length - 1}`,
-        body: `<p style="font-size:14px;margin:4px 0">Tap <b>FLIP</b> as you land to bounce higher · <b>FLIP</b> in the air = backflip · hold ◀▶ + FLIP = front flip · <b>SPIN</b> = 360 · <b>▼</b> = the worm</p>`,
+        body: (() => { const F = input.touchMode ? 'FLIP' : btnName('a'), Sp = input.touchMode ? 'SPIN' : btnName('b'), D = input.touchMode ? '▼' : '↓'; return `<p style="font-size:14px;margin:4px 0"><b>${F}</b> as you land = bounce higher · <b>${F}</b> in the air = backflip · hold ◀▶ + ${F} = front flip · <b>${Sp}</b> = 360 · <b>${D}</b> = the worm</p>`; })(),
         buttons: [{ v: 'timed', label: '⏱ 60-SECOND CHALLENGE', cls: 'go' }, { v: 'free', label: '∞ FREE BOUNCE<span class="note">No timer, just fun</span>' }, { v: 'hat', label: '🎩 Pick a hat' }, { v: 'back', label: '← Back' }],
       });
       if (v === 'timed') fadeTo(() => setScene(trampolineScene({ timed: true })));
