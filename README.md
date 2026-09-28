@@ -11,6 +11,7 @@ Find the clues, follow the trail, and solve the mystery!
 ## For grown-ups
 - Plain HTML/JS, no build step. Run locally with `python3 -m http.server` and open http://localhost:8000.
 - Names and the final message live in `js/config.js`.
+- Fresh start on a device (wipes saved progress): add `?reset` to the URL once.
 - Dev shortcuts: `?stage=room|yard|hood|skate|river|pool|newhouse`, `?scene=batting|freida|catfish|sunny|tramp`, `?unlock`.
 - `dev/pad.html` is a controller test page.
 - All art is drawn in code; all sound and music is synthesized with Web Audio

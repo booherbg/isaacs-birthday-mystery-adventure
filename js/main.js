@@ -78,6 +78,7 @@ start({
 
 // Dev shortcuts: ?stage=room|yard|hood|skate|river|pool|newhouse  ?scene=tramp|batting|freida|catfish|sunny  ?unlock
 const q = new URLSearchParams(location.search);
+if (q.has('reset')) { try { localStorage.removeItem('isaac-adventure-v1'); } catch {} location.replace(location.pathname); }
 if (q.has('unlock')) save.set({ done: true });
 const scene = q.get('scene');
 if (q.get('stage')) goStage(q.get('stage'));
