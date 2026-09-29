@@ -375,7 +375,6 @@ export class World {
     if (n.walkTo && n.s.walk) img = Math.floor(n.anim) % 2 ? n.s.walk : n.s.idle;
     const bob = n.walkTo ? 0 : Math.round(Math.sin(game.t * 2 + n.x) * 0.6);
     spr(img, n.x - cx - img.width / 2, n.y - img.height + bob, n.face < 0);
-    if (n.s === SPR.mom) glam(n.x - cx, n.y - img.height, n.x);
   }
 
   drawDog(d, cx) {

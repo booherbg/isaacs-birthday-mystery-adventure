@@ -19,7 +19,9 @@ export const PAL = {
   M: '#f6d383', // Mom's honey blonde
   V: '#d9a94f', // blonde shadow
   Q: '#ff5fa2', // hot pink
-  P: '#ffb3d6', // light pink
+  P: '#e9a3c6', // soft pink (plaid stripe)
+  I: '#b9a7d8', // lavender plaid
+  H: '#3d4270', // navy plaid
   Z: '#e8336f', // glossy lips
 };
 
@@ -149,33 +151,33 @@ function isaac(body, legs) { return build([...I_HEAD, ...I_BODY[body], ...I_LEGS
 
 // ---------------- Mom (Amanda), faces right ----------------
 const MOM_HEAD = [
-  '...QQQ.QQQ....',
-  '..MQkQMQkQM...',
-  '.MMhMMMMMhMM..',
-  'MMhMMMMMMMMMM.',
+  '...MuuuuuM....',
+  '..MuuMuuuuM...',
+  '.MMMuMMuMMMM..',
+  'uuMMMMMMMMMMM.',
   'MMMhsssssssMM.',
   'MMMsssssssssM.',
-  'MMhsskksskksM.',
-  'MMMSswksswks..',
-  'MhMsspssssps..',
-  'MMMssZZZZss...',
-  'MVMMssZZsss...',
-  'MhMVMsssss....',
-  'MVMM..sss.....',
+  'MMhsskssskssM.',
+  'MMMSsksssksM..',
+  'MhMsspssspsM..',
+  'MMMssmmmmssM..',
+  'MMMMssmmssM...',
+  'MhMMMsssssM...',
+  'MMMM..sss.M...',
 ];
 const MOM_BINOC = { 5: 'MMMsssGGGGGsM.', 6: 'MMhssGkGGkGG..', 7: 'MMMSsGGGGGGs..' };
 const MOM_BODY = {
-  side: ['MMM.QQQQQQQ...', 'MV.QQQQQQQQQ..', 'Mh.QQPwwPQQQ..', '.M.sQQQwQQQs..', '...sQQQQQQQs..', '...QQQQQQQQ...'],
-  wave: ['MMM.QQQQQQQ.ss', 'MV.QQQQQQQQQs.', 'Mh.QQPwwPQQ...', '.M.sQQQwQQQ...', '...sQQQQQQQ...', '...QQQQQQQQ...'],
-  binoc: ['MMM.QQQQQQQss.', 'MV.QQQQQQQQs..', 'Mh.QQPwwPQQ...', '.M.QQQQwQQQ...', '...QQQQQQQQ...', '...QQQQQQQQ...'],
+  side: ['MMM.IIJxJIII..', 'MM.IIHIJIHIII.', 'Mh.PIHIIIHIPI.', '.M.sHHHHHHHs..', '...sIIHIIHIIs.', '...IIPIIIPII..'],
+  wave: ['MMM.IIJxJII.ss', 'MM.IIHIJIHIIs.', 'Mh.PIHIIIHIP..', '.M.sHHHHHHH...', '...sIIHIIHII..', '...IIPIIIPII..'],
+  binoc: ['MMM.IIJxJIIss.', 'MM.IIHIJIHIIs.', 'Mh.PIHIIIHIP..', '.M.IHHHHHHH...', '...IIIHIIHII..', '...IIPIIIPII..'],
 };
 const MOM = (legs, arms = 'side') => [
   ...MOM_HEAD.map((r, i) => (arms === 'binoc' && MOM_BINOC[i]) || r),
   ...MOM_BODY[arms],
-  '...WWWWWWWW...',
+  '...LLLLLLLL...',
   ...(legs === 'a'
-    ? ['...WWW..WWW...', '..WWW....WWW..', '..WW......WW..', '.QQQ......QQQ.']
-    : ['...WWW..WWW...', '...WWW..WWW...', '...WW....WW...', '...QQQ...QQQ..']),
+    ? ['...LLL..LLL...', '..LLL....LLL..', '..LL......LL..', '.www......www.']
+    : ['...LLL..LLL...', '...LLL..LLL...', '...LL....LL...', '...www...www..']),
 ];
 
 // ---------------- Dad (Blaine), faces right ----------------
@@ -349,30 +351,30 @@ const P_ISAAC = [
   '.bbbbbbwwwwwwwwwbbbbbb.',
 ];
 const P_MOM = [
-  '.......uuuuuuuu........',
-  '.....uuvvuuuuuuuu......',
-  '....uuQQQQQuQQQQQuu....',
-  '...uuvQkkkQQQkkkQuuu...',
+  '.......UUUUUUUU........',
+  '.....UUvvUUUUUUUU......',
+  '....uUvuUUuUUvvUuUU....',
+  '...uuvuuuuuuuuuvvuuu...',
   '..uuvuuuuuuuuuuuuvuuu..',
   '..uvuuusssssssssuuvuu..',
   '.uuvuusssssssssssuuvuu.',
   '.uvuusssssssssssssuuvu.',
-  '.uvuuskkksssskkkssuuvu.',
-  '.uvuskskkssssskksksuvu.',
+  '.uvuusUUUssssUUUssuuvu.',
+  '.uvussskkssssskksssuvu.',
   'uuvussskwsssssskwssuvuu',
   'uuvussssssssssssssssuvu',
   'uuvuspppssssssssppppuvu',
   'uuvusppssssSsssssppsuvu',
-  'uuvuusssZZZZZZZZssssuvu',
-  'uuvuussswwwwwwwwwssuuvu',
-  'uuvuuusssZZZZZZsssuuuvu',
+  'uuvuusssmmmmmmmmssssuvu',
+  'uuvuussswwwwwwwwsssuuvu',
+  'uuvuuusssmmmmmmsssuuuvu',
   '.uvuuuusssssssssuuuuvu.',
   '.uuvuuuuusssssssuuuuvu.',
   '.uuvuuuuuuusssuuuuuuvu.',
-  '..uuuuuQQQsssssQQuuuuu.',
-  '..uuuQQQQQQsssQQQQQuuu.',
-  '...QQQQQQQPwwPQQQQQQQ..',
-  '..QQQQQQQQQwPQQQQQQQQ..',
+  '..uuuuuIHIsssssIHuuuuu.',
+  '..uuuIIHIIIJxJPHIIIuuu.',
+  '...IIIHIIPHIIIHIPIHII..',
+  '..IIPHIIIHIPIHIIIHPII..',
 ];
 const P_DAD = [
   '.......d..dd.d.dd......',
@@ -592,7 +594,7 @@ export function buildSprites() {
     bunny: build(BUNNY), bow: build(PRESENT_BOW), creeper: build(CREEPER), goose: build(GOOSE),
   });
   Object.assign(PORTRAIT, {
-    isaac: build(P_ISAAC, { name: 'p-isaac' }), mom: build(P_MOM, { name: 'p-mom', pal: { ...PAL, u: '#f6d383', v: '#fff4b5', U: '#b8863a' } }), dad: build(P_DAD, { name: 'p-dad' }),
+    isaac: build(P_ISAAC, { name: 'p-isaac' }), mom: build(P_MOM, { name: 'p-mom', pal: { ...PAL, u: '#efcf8a', v: '#fff1c4', U: '#8a6440' } }), dad: build(P_DAD, { name: 'p-dad' }),
     sunny: build(P_SUNNY, { name: 'p-sunny' }), freida: build(P_FREIDA, { name: 'p-freida' }),
   });
 }
