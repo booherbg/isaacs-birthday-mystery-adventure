@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How We Built It</title>
+<meta name="description" content="Post-mortem: a pixel-art birthday reveal game built in one afternoon by a dad and an AI pair-programmer.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#1c1238; --panel:#2a1f4a; --ink:#f4f0ff; --muted:#c9bfe6; --sun:#ffde5c; --pink:#ff7db4; --blue:#7fb4ff; --line:#4a3d78; }
+* { box-sizing:border-box }
+body { margin:0; background:radial-gradient(ellipse at 50% 0%, #3a2a6e, var(--bg) 55%); color:var(--ink); font:17px/1.6 Fredoka, ui-rounded, system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+h1, h2 { font-family:'Press Start 2P', monospace; line-height:1.4; }
+h1 { font-size: clamp(18px, 4.4vw, 30px); color: var(--sun); text-shadow: 3px 3px 0 #e8483f, 6px 6px 0 #0c0718; margin: 10px 0 6px; }
+h2 { font-size: clamp(13px, 2.6vw, 17px); color: var(--sun); margin: 44px 0 12px; }
+h3 { font-size: 19px; margin: 22px 0 6px; color: var(--pink); }
+a { color: var(--blue); }
+.lede { font-size: 19px; color: var(--muted); }
+.warn { background:#4a1f3a; border:2px solid var(--pink); border-radius:12px; padding:10px 14px; font-weight:600; margin: 14px 0; }
+.stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap:10px; margin: 16px 0; }
+.stats div { background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:10px; text-align:center; }
+.stats b { display:block; font-family:'Press Start 2P'; font-size:16px; color:var(--sun); margin-bottom:6px; }
+.stats span { font-size:14px; color:var(--muted); }
+.gallery { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap:12px; }
+figure { margin:0; background:var(--panel); border:2px solid var(--line); border-radius:12px; overflow:hidden; }
+figure img { width:100%; display:block; image-rendering: pixelated; }
+figcaption { padding:6px 10px; font-size:14px; color:var(--muted); }
+.card { background:var(--panel); border:2px solid var(--line); border-radius:14px; padding:14px 18px; }
+ul.tl { list-style:none; padding:0; margin:0; }
+ul.tl li { padding:6px 0 6px 18px; border-left:3px solid var(--line); position:relative; }
+ul.tl li::before { content:''; position:absolute; left:-8px; top:13px; width:13px; height:13px; border-radius:50%; background:var(--sun); }
+ul.tl time { font-family:'Press Start 2P'; font-size:11px; color:var(--sun); margin-right:8px; }
+table { width:100%; border-collapse:collapse; font-size:15px; }
+td { border-top:1px solid var(--line); padding:8px 6px; vertical-align:top; }
+code, pre { font-family: ui-monospace, Menlo, monospace; }
+code { background:#130c2a; padding:1px 5px; border-radius:5px; font-size:.9em; }
+ol.prompts { list-style:none; padding:0; counter-reset:none; }
+ol.prompts li { background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:10px 14px; margin:10px 0; }
+ol.prompts pre { white-space:pre-wrap; word-wrap:break-word; margin:4px 0 0; font-size:14.5px; line-height:1.5; color:#fff; }
+.pmeta { font-family:'Press Start 2P'; font-size:10px; color:var(--sun); display:flex; gap:10px; }
+.pmeta time { color:var(--pink); }
+.pnote { font-size:13px; color:var(--muted); font-style:italic; margin-top:6px; }
+.ideas li { margin: 6px 0; }
+.foot { margin-top:50px; color:var(--muted); font-size:14px; text-align:center; }
+.btn { display:inline-block; background:var(--sun); color:#2a1f33; font-weight:700; padding:10px 16px; border-radius:12px; text-decoration:none; border:3px solid #0c0718; box-shadow:0 4px 0 #0c0718; }
+</style></head>
+<body><main>
+<p><a class="btn" href="./">▶ Play the game</a></p>
+<h1>How we built Isaac's Birthday Mystery Adventure</h1>
+<p class="lede">A post-mortem: one dad, one AI pair-programmer (Claude, in Claude Code), one afternoon. It's a pixel-art mystery that reveals an 8-year-old's birthday present, and then becomes the present's own mini-game.</p>
+<div class="warn">⚠️ Spoiler: this page reveals the surprise. (If you're Isaac: go play first!)</div>
+
+<div class="stats">
+  <div><b>~2.5h</b><span>first prompt → birthday reveal</span></div>
+  <div><b>4740</b><span>lines of JS</span></div>
+  <div><b>0</b><span>image or audio files: every pixel and note is code</span></div>
+  <div><b>0</b><span>dependencies / build steps</span></div>
+  <div><b>39</b><span>hand-authored pixel sprites</span></div>
+  <div><b>15</b><span>songs &amp; jingles, 43 sound effects</span></div>
+  <div><b>59</b><span>prompts from Dad (all below)</span></div>
+  <div><b>11</b><span>deploys to GitHub Pages</span></div>
+</div>
+
+<h2>What it is</h2>
+<div class="card">
+<p>Isaac turns 8. The family is moving to a new house this week, and a trampoline is coming with it. The game is a 5-ish minute side-scroller built from real places and real family. Isaac wakes up in his room, grabs Big Bunny, and meets Freida the calico in a Pokémon-card-style "wild FREIDA appeared!" battle. He scooters through the neighborhood to Brunsdale Fields, where Dad pitches (Wii-Sports vibes). Then he picks a path: out-trick the Creeper Crew at Dike East Skate Park while Mom judges, or bike the Red River to Lions Conservancy Park, where Mom (Audubon, binoculars up) watches him reel in a mooneye and a channel catfish with a catfish bell on the rod. Then Island Park Pool on 7th St, where Sunny cannonballs into the pool, and finally the new house. Three clues (BIG, BOUNCY, in the BACKYARD) lead to a giant present: <b>IT'S A TRAMPOLINE.</b> His first bounce becomes <b>Trampoline Time</b>, the replayable part: backflips, 360s, the worm, combos up to x8, sky to outer space, and unlockable hats (including his real Pikachu hat and his real fishing hat).</p>
+<p>It runs on phones (a touch pad), laptops (keyboard) and a USB gamepad (Gamepad API, including his generic Logitech Precision).</p>
+</div>
+
+<h2>Screenshots</h2>
+<div class="gallery"><figure><img src="report/01-title.png" alt="Title screen" loading="lazy"><figcaption>Title screen</figcaption></figure><figure><img src="report/02-room.png" alt="Isaac&#x27;s room: Big Bunny, the Toniebox (PLAY ♪), the Spidey poster" loading="lazy"><figcaption>Isaac&#x27;s room: Big Bunny, the Toniebox (PLAY ♪), the Spidey poster</figcaption></figure><figure><img src="report/03-freida-card.png" alt="&quot;A wild FREIDA appeared!&quot;" loading="lazy"><figcaption>&quot;A wild FREIDA appeared!&quot;</figcaption></figure><figure><img src="report/04-neighborhood.png" alt="Scooter ride; every card is a family trading card" loading="lazy"><figcaption>Scooter ride; every card is a family trading card</figcaption></figure><figure><img src="report/05-batting.png" alt="Home run at Brunsdale Fields" loading="lazy"><figcaption>Home run at Brunsdale Fields</figcaption></figure><figure><img src="report/06-skate.png" alt="Dike East: Mom is the official judge" loading="lazy"><figcaption>Dike East: Mom is the official judge</figcaption></figure><figure><img src="report/07-fishing.png" alt="Lions Conservancy Park: mooneye, catfish bell, Mom birding" loading="lazy"><figcaption>Lions Conservancy Park: mooneye, catfish bell, Mom birding</figcaption></figure><figure><img src="report/08-pool.png" alt="Island Park Pool on 7th St" loading="lazy"><figcaption>Island Park Pool on 7th St</figcaption></figure><figure><img src="report/09-sunny.png" alt="&quot;A wild SUNNY appeared!&quot;" loading="lazy"><figcaption>&quot;A wild SUNNY appeared!&quot;</figcaption></figure><figure><img src="report/10-newhouse.png" alt="The new house (drawn from a photo)" loading="lazy"><figcaption>The new house (drawn from a photo)</figcaption></figure><figure><img src="report/11-reveal.png" alt="IT&#x27;S A TRAMPOLINE!!!" loading="lazy"><figcaption>IT&#x27;S A TRAMPOLINE!!!</figcaption></figure><figure><img src="report/12-trampoline.png" alt="Trampoline Time" loading="lazy"><figcaption>Trampoline Time</figcaption></figure><figure><img src="report/13-hats.png" alt="Hat picker (with real-life hats)" loading="lazy"><figcaption>Hat picker (with real-life hats)</figcaption></figure><figure><img src="report/14-card.png" alt="The birthday card" loading="lazy"><figcaption>The birthday card</figcaption></figure></div>
+
+<h2>Timeline (Sept 28, 2026)</h2>
+<ul class="tl">
+<li><time>14:55</time>First prompt: photos of the new house and the family, a list of what Isaac loves, "effort is high but scope is tight."</li>
+<li><time>15:05</time>Design note written; build starts. Blaine keeps streaming ideas: controller, Pokémon <i>cards</i>, Freida, two paths, the worm, real places.</li>
+<li><time>15:33</time>Repo stubbed with a spoiler-free "coming soon" page so the tinyurl redirect could be tested early.</li>
+<li><time>15:39</time>Controller test page shipped; Blaine validated his real USB pad and pasted the report back.</li>
+<li><time>16:14</time>First playable build live. Autoplay bot: both story paths finish with zero errors.</li>
+<li><time>16:20–17:05</time>Live playtest loop. Blaine plays on his phone and sends notes; three QA subagents (game critic, UX, design coherence) review in parallel; about 8 deploys.</li>
+<li><time>~17:15</time>"It's go time." Final deploy, <code>?reset</code> on Isaac's device, the reveal.</li>
+<li><time>after</time>"It went amazing." Glam-Mom upgrade, this report, the About page.</li>
+</ul>
+
+<h2>How it's built</h2>
+<div class="card">
+<h3>No build, no dependencies</h3>
+<p>Plain HTML + ES modules served straight from GitHub Pages. <code>index.html</code>, <code>style.css</code>, and 15 small modules: an engine, sprites, art, audio, input, UI, world (the platformer), levels (the story), battle, batting, trampoline, cards, title, save and main. There is nothing to install and nothing to compile. Push, and it's live in about 40 seconds.</p>
+<h3>Canvas for the world, DOM for words</h3>
+<p>The game renders into a 256×144 canvas scaled up with <code>image-rendering: pixelated</code>. All text (dialog, menus, clue cards, the Pokémon-style foe cards with a CSS holo shimmer) is regular HTML layered on top. That keeps the words crisp and readable for an 8-year-old at any screen size, which a pixel font can't do on a phone. In portrait, the dialog moves into the empty space below the game.</p>
+<h3>Pixel art as code</h3>
+<p>Every sprite is an array of strings plus a palette. <code>build()</code> adds a 1px dark outline automatically, so only the fills need drawing. Isaac is assembled from head, body and leg parts, which gives walk, ride, bike, cheer and tuck poses without redrawing his curls each time. Sunny was generated procedurally (overlapping blobs, then a curl dither) after the hand-drawn version looked like "a generic brown dog." Both houses are drawn from Blaine's photos with rectangles and scanline triangles. The house numbers were left out on purpose, because the site is public. A dev page renders every sprite at 4× so the AI could look at its own art and iterate.</p>
+<h3>All sound is synthesized</h3>
+<p>Web Audio only: pulse waves (12.5/25/50% duty, built from Fourier series with <code>createPeriodicWave</code>), triangle bass and noise drums, driven by a tiny step sequencer. Songs are written as strings like <code>"C5:2 C6 A5 G5 E5 G5:3"</code>. There's a stadium-organ <i>Take Me Out to the Ball Game</i> and <i>Happy Birthday</i> (both public domain), Toniebox tunes, and originals for each place. There are about 45 sound effects, from Sunny's bark and Freida's meow to the catfish bell, the trampoline boing and the party-horn creeper pop. The Red River's babbling-brook bed borrows a trick from Blaine's RollerCoaster Tycoon clone: random tiny sine blips, pitch-skewed low, with upward sweeps.</p>
+<h3>Input: keyboard, touch, and a $10 gamepad</h3>
+<p>Keyboard, an on-screen touch pad and the Gamepad API all merge into one per-frame state. The touch pad supports multi-touch (hold ▶ and tap JUMP) and sliding your thumb between arrows, and it relabels itself per moment: JUMP, SWING!, REEL!, OPEN!, FLIP/SPIN/▼. Generic USB pads report "non-standard" mappings, so we shipped a guided controller test page early. Blaine pressed every button and pasted the report, which confirmed the Logitech Precision's layout (d-pad on axes 0/1, face buttons 0–3, shoulders 4–7, start 9). The on-screen hints then use its printed button numbers. Hat-switch d-pads (axis 9) are decoded too.</p>
+<h3>Story engine</h3>
+<p>Scenes have enter/update/render. Cutscenes are plain <code>async</code> functions (<code>await say('mom', …)</code>, <code>await w.walkTo(dad, 1480)</code>, <code>await wait(0.5)</code>) that run on game-time timers. The timers are cleared on every scene change, which cancels any stale script for free. The platformer "World" handles walk, scooter, skateboard (auto-roll with kickflips, heelflips, tre flips, 360s, grabs and grinds) and bike modes. It also covers kicker ramps, rails, bouncy pool umbrellas, collectibles, triggers, Sunny's follow-and-hop AI, and an "interactables" system: stand next to the Toniebox and JUMP becomes PLAY ♪.</p>
+<h3>Designed so an 8-year-old can't lose</h3>
+<p>There are no fail states:</p>
+<ul>
+<li>Dad's pitches get slower, then turn into a meatball any swing connects with.</li>
+<li>Mom helps reel if the catfish fights too long.</li>
+<li>An invisible safety net boings you back onto the trampoline.</li>
+<li>The skate contest is "won" either way ("it's your BIRTHDAY, ssso you win!").</li>
+</ul>
+<p>Beyond that:</p>
+<ul>
+<li>Clue cards need an explicit "Got it!".</li>
+<li>A Clue Book lets you flip back through clues.</li>
+<li>Progress saves to <code>localStorage</code>, and <code>?reset</code> wipes it for a fresh reveal.</li>
+</ul>
+</div>
+
+<h2>How we worked (and tested)</h2>
+<div class="card">
+<ul>
+<li><b>Default and keep moving.</b> Blaine sent about 59 messages while the AI was mid-build, often several a minute. Each one was folded in and restated in a line or two ("Mom judges the skate contest so both parents have an arc"). Nothing waited on a meeting. Assumptions were flagged and made one-line-configurable (<code>js/config.js</code>).</li>
+<li><b>Stub the URL first.</b> A spoiler-free page went up at the final address 40 minutes in, so the tinyurl, the custom domain and Pages were all proven before any game code mattered.</li>
+<li><b>The AI looked at its own output.</b> Headless Chrome (<code>puppeteer-core</code>) took screenshots of every level, mini-game and phone layout. Contact sheets of those went back to the model, which is how it caught a broken font, a roof texture bleeding into the sky, a hidden river, a bike that looked like dotted circles, and more.</li>
+<li><b>A bot plays the whole story.</b> An autoplay script spams A, teleports Isaac to each trigger, picks each path, and logs every scene change and console error. It ran after nearly every change, on both paths, and caught a real soft-lock that no human had hit yet.</li>
+<li><b>Real phones, emulated.</b> Pixel portrait/landscape with genuine touch events: tap the pad and assert that Isaac moved and jumped.</li>
+<li><b>Three parallel reviewers.</b> Subagents with different lenses played and read the build at the same time: a game critic (who wrote bots to measure timing windows), a kids-and-mobile UX expert, and a design/coherence and "quirky fun" critic (who audited story logic, pixel art and even the music data). Their findings drove the last few rounds: the reveal's OPEN button bug, the off-screen trampoline landings, worm-spam scoring, and about 35% of the dialog trimmed.</li>
+<li><b>The best QA was Dad on his phone,</b> plus a friend on iOS who found the stuck-zoom bug.</li>
+</ul>
+</div>
+
+<h2>Bugs we caught (and how)</h2>
+<div class="card"><table><tr><td><b>Batting could soft-lock</b></td><td>Once Dad&#x27;s easy pitches kicked in, an early button-masher fouled forever (the autoplay bot hit 10 fouls).</td><td>Dad&#x27;s &#x27;meatball&#x27; pitch: any swing connects. Found by the headless autoplay bot.</td></tr><tr><td><b>Pixel font showed &#x27;FREID9&#x27;</b></td><td>Three 3×5 glyphs (A, H, W) were 14 characters instead of 15; a padding hack hid it.</td><td>Fixed the glyph strings and added a length check.</td></tr><tr><td><b>Tapping the speech bubble did nothing</b></td><td>Only taps on the game canvas advanced text; the dialog lives outside it in the DOM.</td><td>Taps anywhere advance, plus a blinking NEXT ▶ pill that names the right button for the device.</td></tr><tr><td><b>Clue #1 flashed by</b></td><td>The same tap that finished Freida&#x27;s battle dismissed the clue card.</td><td>Clue cards need an explicit &#x27;Got it!&#x27; button; a Clue Book shows every clue found.</td></tr><tr><td><b>Controller test got &#x27;stuck&#x27;</b></td><td>The test page&#x27;s baseline was captured while the button used to wake the pad was held.</td><td>Buttons always baseline as unpressed; only axes get a rest snapshot.</td></tr><tr><td><b>Top-right buttons dead on menus</b></td><td>Menus are a full-screen overlay above the stage&#x27;s stacking context.</td><td>Moved the buttons out of the stage and above overlays.</td></tr><tr><td><b>iOS (Brave) got stuck zoomed in</b></td><td>iOS ignores user-scalable=no.</td><td>Block pinch/double-tap gestures and snap the viewport back if zoom slips through.</td></tr><tr><td><b>The reveal button said JUMP, not OPEN!</b></td><td>The interaction system relabelled the A button every frame.</td><td>Only relabel when the nearby interactable changes. Found by the UX reviewer.</td></tr><tr><td><b>Double-tap picked a choice he never saw</b></td><td>Choice buttons appear under your finger and fired on the first pointerdown.</td><td>Ignore choice taps for 0.4s after they appear.</td></tr><tr><td><b>Trampoline landings happened off-screen</b></td><td>At high POW the camera lagged about 0.15×vy behind.</td><td>Faster camera while falling, plus look-ahead. Found by the game-critic bot.</td></tr><tr><td><b>Early presses caused BONKs</b></td><td>FLIP is both &#x27;time the landing&#x27; and &#x27;start a flip&#x27;.</td><td>A press that can&#x27;t finish a flip counts as landing timing.</td></tr><tr><td><b>Worm spam unlocked every hat in one round</b></td><td>No-risk trick plus score-based unlocks.</td><td>Repeats don&#x27;t build combo; hats became skill goals, at most 2 per round.</td></tr><tr><td><b>My own script erased a file</b></td><td>Python opened tramp.js for writing before reading it back.</td><td>Restored from git and re-applied. Commit early, commit often.</td></tr></table></div>
+
+<h2>What we'd tell someone doing this</h2>
+<div class="card">
+<ul>
+<li><b>Personal details are the whole game.</b> The Toniebox, the worm, a catfish bell, Brunsdale Fields, Mom's binoculars, the Pikachu hat: every specific detail Blaine added made it land harder than any mechanic.</li>
+<li><b>Photos beat descriptions.</b> House photos became pixel houses, and the fishing-hat photo became an unlockable hat.</li>
+<li><b>Kid-proof the seams, not just the mechanics.</b> The hardest bugs were at transitions: a tap that dismissed a clue, a label reset at the climax, a double-tap on a choice.</li>
+<li><b>Guard the surprise.</b> Nothing before the reveal says "trampoline": not the title, the URL, or the menus. The link to this page only appears after the mystery is solved.</li>
+<li><b>Ship a URL in the first hour; ship a game in the second.</b></li>
+</ul>
+</div>
+
+<h2>The prompts, verbatim</h2>
+<p class="lede">Every message Blaine sent, in order and unedited, typos and all. Images are noted in italics. (The AI's replies are omitted.)</p>
+<ol class="prompts"><li><div class="pmeta"><span>#1</span><time>~14:55</time></div><pre>hi claude! ok so my son turns 8 and its his birthday. i want to make a simple and fun game (with some cute audio) that he can play to reveal he&#x27;s getting a trampoline. total gameplay under 5 minutes. web via github pages - i&#x27;ll set up a tinyurl that links to it. lets make it silly and fun - nostalgic and easy to play with obvious qol interface - mobile play and laptop. then when it&#x27;s ready - keep going and make a fun repeatable thing so he can play again. im imagining its like a character based scroller (he&#x27;s a white blond boy), loves pokemon and baseball and minecraft and his puppy sunny. this isn&#x27;t serious - just a fun thing to let him know he&#x27;ll have a trampoline in his new house (you can see other sessions where we talk about our house that we&#x27;re getting). i can include a photo of the house if it makes sense. maybe a little adventure game where he has to find things - and the end of the mystery is that he finds the trampoline and jumps on it in the new backyard (its ordered and we&#x27;ll be setting it up in our new house but dont move until this weekend). here&#x27;s a photo of the new house. [Image #1] and our puppy is a 7 months old red mini poodle (red/brown color). maybe he plays a part too? and mom and dad (me, blaine and wife, amanda) maybe are part of it too hah. [Image #2] amanda sonny isaac and [Image #3] me.
+
+effort is high but scope is tight. you got this :)</pre><div class="pnote">Photos: the new house; Mom, Sunny and Isaac on the couch; Dad.</div></li><li><div class="pmeta"><span>#2</span></div><pre>ok other ideas - i have a usb game controller can we use that via web? or native? just an idea - i just plugged it in. he loves pokemon the card game but hasn&#x27;t played a ton of the actual game. we&#x27;ve also of course played mario wonder, alienation, wii sports etc. thinking generally &#x27;isaacs adventure&#x27; is a pretty fun working title - either side scroller or first person (but fp may be too much).</pre></li><li><div class="pmeta"><span>#3</span></div><pre>[Image #4] this is our calico freida. maybe each of us are like npcs that give him hints on where to adventure next. he starts at our current house, goes through a neighborhood (maybe 2 paths to get to the new house? via the skate park - he loves skateboarding and biking - or via the bike trails along the red river? he also likes fishing - we fish the red river a ton).</pre><div class="pnote">Photo: Freida the calico, looking unimpressed.</div></li><li><div class="pmeta"><span>#4</span></div><pre>what else does he like. spiderman. pokemon cards. hot wheels. his green/black scooter. big bunny is his favorite stuffed animal (white stuff bunny with long ears). here&#x27;s big bunny [Image #5] and here&#x27;s the toni he just got. [Image #6] paw patrol is also fun.</pre><div class="pnote">Photos: Big Bunny (with “Isaac” on one ear); his red Toniebox and figures.</div></li><li><div class="pmeta"><span>#5</span></div><pre>all assumptions sound good. blocky caves - yes but lets make it at the skate park. they&#x27;re skating and he has to do better skateboard tricks than them. route 8 meadow - great but lets make that at the island park pool (near our new house). trampoline mode is its whole game - he loves doing backflips (skyzone is his favorite place, forgot to mention that). so he can do tricks of all kinds and its just a sweet fun game - with combos maybe</pre></li><li><div class="pmeta"><span>#6</span></div><pre>here&#x27;s our current house - can be the starting point. awesome. [Image #7]</pre><div class="pnote">Photo: the current house (maroon garage door, big pine).</div></li><li><div class="pmeta"><span>#7</span></div><pre>he also loves doing the worm (haha), dancing at weddings.</pre></li><li><div class="pmeta"><span>#8</span></div><pre>Island Park Pool is a city pool. Fishing is on the Red River in north dakota/fargo (separate places)</pre></li><li><div class="pmeta"><span>#9</span></div><pre>[Image #8] island park pool in fargo</pre><div class="pnote">Photo: aerial of Island Park Pool (green corkscrew slide, blue slide, lap pool).</div></li><li><div class="pmeta"><span>#10</span></div><pre>great let me know if you need anything - give me synopsis of game plot so i can tweak if needed. remember we&#x27;re keeping it simple - this is above all fun and accurate for what i&#x27;ve provided so far</pre></li><li><div class="pmeta"><span>#11</span></div><pre>love it. &#x27;blocky skate park&#x27; can literally just be &#x27;dyke east skate park&#x27; in fargo nd</pre></li><li><div class="pmeta"><span>#12</span></div><pre>also feel free to look at the rct clone if you need inspiration for emergent audio - there&#x27;s some fun ones there (parent folder / 2026-rct)</pre></li><li><div class="pmeta"><span>#13</span></div><pre>its rust but has some fun ideas with web board too for exploring - maybe not helpful</pre></li><li><div class="pmeta"><span>#14</span></div><pre>isaacs birthday mystery adventure - as the working title. assuming it&#x27;ll be available at github.com/booherbg/isaacs-birthday-mystery-adventure</pre></li><li><div class="pmeta"><span>#15</span></div><pre>great. progress / eta for first round? minutes/dozens/hours?</pre></li><li><div class="pmeta"><span>#16</span></div><pre>[Image #9] - this should work! blainebooher.com is just my github.io alias so it should work as expected</pre><div class="pnote">Screenshot: setting up the tinyurl.</div></li><li><div class="pmeta"><span>#17</span><time>~15:30</time></div><pre>go ahead and stub the repo so i can make sure redirection works. landing page or quick graphic/text stub would be just fine</pre></li><li><div class="pmeta"><span>#18</span></div><pre>works perfectly - landing page. feel free to stub out controller tests and i&#x27;ll verify that directions/buttons work so we can use or debug or move on?</pre></li><li><div class="pmeta"><span>#19</span></div><pre>the usb controller is a generic ps1 style (directional pad, 4 buttons, two shoulder buttons on each side) - from amazon super generic</pre></li><li><div class="pmeta"><span>#20</span></div><pre>great - i have usb plugged in and am happy to test. open in my local browser if needed so we dont have eto wait on gh-pages</pre></li><li><div class="pmeta"><span>#21</span></div><pre>so far so good. got stuck on right face button which is registering as &#x27;a&#x27;
+
+id: Logitech(R) Precision(TM) Gamepad (Vendor: 046d Product: c21a)
+mapping: non-standard
+buttons: 10  axes: 2
+rest axes: 0.004, 0.004
+
+D-PAD UP                     → axis 1 = -0.992 (rest 0.004)  game read UP ✓
+D-PAD DOWN                   → axis 1 = 1.000 (rest 0.004)  game read DOWN ✓
+D-PAD LEFT                   → axis 0 = -0.992 (rest 0.004)  game read LEFT ✓
+D-PAD RIGHT                  → axis 0 = 1.000 (rest 0.004)  game read RIGHT ✓
+BOTTOM face button (✕)       → button 1  game read A ✓</pre></li><li><div class="pmeta"><span>#22</span></div><pre>[Image #11] (im pressing the right most on the right side is that right)</pre><div class="pnote">Screenshot: the controller test page.</div></li><li><div class="pmeta"><span>#23</span></div><pre>not exactly sure what &#x27;right face&#x27; means</pre></li><li><div class="pmeta"><span>#24</span></div><pre>ok we&#x27;re good
+
+id: Logitech(R) Precision(TM) Gamepad (Vendor: 046d Product: c21a)
+mapping: non-standard
+buttons: 10  axes: 2
+rest axes: 0.004, 0.004
+
+D-PAD UP                     → axis 1 = -0.992 (rest 0.004)  game read UP ✓
+D-PAD DOWN                   → axis 1 = 1.000 (rest 0.004)  game read DOWN ✓
+D-PAD LEFT                   → axis 0 = -0.992 (rest 0.004)  game read LEFT ✓
+D-PAD RIGHT                  → axis 0 = 1.000 (rest 0.004)  game read RIGHT ✓
+BOTTOM face button (✕)       → button 1  game read A ✓
+RIGHT face button (◯)        → button 2  game read A ✓
+LEFT face button (◻)         → button 0  game read B ✓
+TOP face button (△)          → button 3  game read B ✓
+START                        → button 9  game read START ✓
+SELECT                       → button 8
+L1 (front left shoulder)     → button 4
+R1 (front right shoulder)    → button 5  </pre></li><li><div class="pmeta"><span>#25</span></div><pre>id: Logitech(R) Precision(TM) Gamepad (Vendor: 046d Product: c21a)
+mapping: non-standard
+buttons: 10  axes: 2
+rest axes: 0.004, 0.004
+
+D-PAD UP                     → axis 1 = -0.992 (rest 0.004)  game read UP ✓
+D-PAD DOWN                   → axis 1 = 1.000 (rest 0.004)  game read DOWN ✓
+D-PAD LEFT                   → axis 0 = -0.992 (rest 0.004)  game read LEFT ✓
+D-PAD RIGHT                  → axis 0 = 1.000 (rest 0.004)  game read RIGHT ✓
+BOTTOM button (printed 2)    → button 1  game read A ✓
+RIGHT button (printed 3)     → button 2  game read A ✓
+LEFT button (printed 1)      → button 0  game read B ✓
+TOP button (printed 4)       → button 3  game read B ✓
+START                        → button 9  game read START ✓
+SELECT                       → button 8
+front LEFT shoulder          → button 4  game read B ✓
+front RIGHT shoulder         → button 5  game read B ✓
+back LEFT shoulder           → button 6  game read B ✓
+back RIGHT shoulder          → button 7  game read B ✓</pre><div class="pnote">(A pasted controller-test report.)</div></li><li><div class="pmeta"><span>#26</span></div><pre>do we need to do anything to make this work on the deployed page vs local? just checking</pre></li><li><div class="pmeta"><span>#27</span><time>~16:15</time></div><pre>great. btw i cant get controller to work w/ pixel/android so on mobile we will need to make sure touch controls work as expected (overlay controls maybe?)</pre></li><li><div class="pmeta"><span>#28</span></div><pre>when you&#x27;re done do a qa pass from game critic, ux expert, and design overall critique from coherancy and quirky-fun perspective (look for things that dont make sense or are not fully integrated, audit the pixel art and audio, etc - using attention on the seams and details between experience hooks, interactions, story, and flow)</pre></li><li><div class="pmeta"><span>#29</span></div><pre>i can test too whenever</pre></li><li><div class="pmeta"><span>#30</span></div><pre>first feedback. &#x27;no bouncing save that for later&#x27; is too on the nose but i love it. maybe something like &#x27;i know how much you love to bounce - but lets not jump on the bed please!&#x27;. also i want to interact with the toni in his room somehow. also its not clear how to go to the next speech bubble - so far just finding clicking off-bubbleworks. the little black arro wmaybe works but its not consistent. music is fun! little hidden interactions are always welcome hah. ok moving on to outside</pre></li><li><div class="pmeta"><span>#31</span></div><pre>ok this is so good lol. instead of &#x27;sandlot&#x27; lets say its at the brunsdale fields (baseball fields we play at).</pre></li><li><div class="pmeta"><span>#32</span></div><pre>when isaac does the worm it should say something that makes it clear lol its a cool animation but hard to know what it is - pretty sudden. did we ge ta clue 1 from freida? i didnt see it. i think seeing a clue should have a way to flip to earlier clues too. ok moving on from baseball - that was fun.</pre></li><li><div class="pmeta"><span>#33</span></div><pre>what is &#x27;route 8&#x27; ? instead lets use &#x27;7th st&#x27; which island park and our house is on. also can we do a few more trick types in the creeper competition? that was super fun hah. this works unbelievably well</pre></li><li><div class="pmeta"><span>#34</span></div><pre>we should make it clear what the little cards are that we&#x27;re collecting - i see &#x27;x/10&#x27; but not sure what they are or why we want &#x27;em</pre></li><li><div class="pmeta"><span>#35</span></div><pre>&#x27;when we move in this weekend&#x27; is the right idea but we dont quit eknow when it&#x27;ll show up lol - so how about &quot;its coming to our new backyard after we move in!&quot;</pre></li><li><div class="pmeta"><span>#36</span></div><pre>lets make the trampoline mini game - a bit wider so its easier to bounce on hah - easy to fall off currently. possible to bounce higher somehow? OK THIS IS AWESOME unbelievable nice work</pre></li><li><div class="pmeta"><span>#37</span></div><pre>the birthday card could use a pass on wide-screen mobile</pre></li><li><div class="pmeta"><span>#38</span></div><pre>the toni interaction is great - hard to jump over it since its the same button on the controller. not sure what a good fix is - maybe can walk through the toni instead of being blocked by it?</pre></li><li><div class="pmeta"><span>#39</span></div><pre>birthday car works well enough i just have to scroll a bit not the end of the world</pre></li><li><div class="pmeta"><span>#40</span></div><pre>lol ok mom isnt fishing its always isaac + dad and were catching channel catfish and goldeye/mooneye (look em up :P ) also riparian vibes and maybe mom is bird watching with us. we&#x27;re at Lion&#x27;s Park in fargo (red river still) that&#x27;s a great spot for us to fish actually lets do that.</pre></li><li><div class="pmeta"><span>#41</span></div><pre>[Image #16] looks like we switched to bike. hes got a black/green trek single speed trail bike lets use that. precaliber</pre><div class="pnote">Screenshot: the first (rough) bike sprite.</div></li><li><div class="pmeta"><span>#42</span></div><pre>ok wait i love that mom is doing this part. ok awesome. lets keep it mom - she&#x27;s fishing great. and bird watching. so she&#x27;s bird watching and wants to see isaac fish. make sense?</pre></li><li><div class="pmeta"><span>#43</span></div><pre>i love that dad and mom both have an arc thats equitable and important</pre></li><li><div class="pmeta"><span>#44</span></div><pre>mom works for the national audubon society so she can have binoculars</pre></li><li><div class="pmeta"><span>#45</span></div><pre>awesome i love that</pre></li><li><div class="pmeta"><span>#46</span></div><pre>the random things blocking the path are kind of annoying (rocks chairs etc) we can probably do without those i think. is the goal of the cards to get 10 or does it not really matter?</pre></li><li><div class="pmeta"><span>#47</span></div><pre>also lets really make the fishing scene detailed - riparian zone in north dakota, beautiful sky with birds and towering native trees, grass, etc. isaac is using a catfish bell as a fun detail.</pre></li><li><div class="pmeta"><span>#48</span></div><pre>feedback from a friend [Image #17]</pre><div class="pnote">Screenshot of a friend&#x27;s text: “Btw brave iOS I cant zoom back out but changing to landscape or back to portrait fixes”</div></li><li><div class="pmeta"><span>#49</span></div><pre>this is crazy good haha sooooo fun</pre></li><li><div class="pmeta"><span>#50</span></div><pre>this is so good. amazing work. ill let you wrap up.</pre></li><li><div class="pmeta"><span>#51</span></div><pre>should the icons in the top right work? i finished the game and not sure if they do anything when clicked</pre></li><li><div class="pmeta"><span>#52</span></div><pre>[Image #18] love this idea. i click one and it just comes back to the screen - is it because i need to unlock? not clear from the messaging but this is a great idea. maybe they&#x27;re grayed out until unlocked? do you unlock w/ found cards? haha great idea. let me find some pictures of hats that we have.</pre><div class="pnote">Screenshot: the first hat-picker menu.</div></li><li><div class="pmeta"><span>#53</span></div><pre>[Image #19] fishing hats/gear hah</pre><div class="pnote">Photo: Dad and Isaac in matching olive fishing hats and vests.</div></li><li><div class="pmeta"><span>#54</span></div><pre>the cutest pikachu hat [Image #20]</pre><div class="pnote">Photo: Isaac in his yellow Pikachu knit hat, holding his own Pikachu-hat drawing.</div></li><li><div class="pmeta"><span>#55</span></div><pre>ok - ill pause for now ty :)</pre></li><li><div class="pmeta"><span>#56</span></div><pre>great. when the dust settles - brainstorm some new things we can expand into, and a full engineering report that has these prompts verbatim, how we built this, as a post-mortem we can publish for folks to learn what we did here. this is wild for only like 2 hours of work. great job. maybe a small little about icon somewhere to tell the story (briefly i can fill in later) and a link to the external engineering report.</pre></li><li><div class="pmeta"><span>#57</span></div><pre>Lions Conservancy Park is the park name just remembered</pre></li><li><div class="pmeta"><span>#58</span><time>~17:15</time></div><pre>great please move to wrap up its go time</pre></li><li><div class="pmeta"><span>#59</span><time>after</time></div><pre>quick notes - mom is pretty blonde - and often wears pink and cute colors. she&#x27;s also super hot (my wife) and her character is a bit homely. please upgrade that character in a comicaly sexy way. it went amazing ty. also mom doesnt really have binoculars that we can see.</pre></li></ol>
+
+<h2>What's next</h2>
+<div class="card"><ul class="ideas"><li><b>Chapter 2: Moving Day</b> Load the truck Tetris-style, keep Sunny and Freida from escaping, first night in the new house.</li><li><b>Seasons on 7th St</b> Halloween trick-or-treating, first snow in the new backyard, sledding off the dike, snowball fight with Dad.</li><li><b>Red River Field Guide</b> A fishing log of real North Dakota species (channel cat, goldeye, mooneye, walleye, sauger, pike, drum), with catch-and-release photos.</li><li><b>Mom&#x27;s Audubon Bird Log</b> Spot-and-identify birds along the trail (pelicans, great blue heron, bald eagle, Baltimore oriole) with synthesized calls.</li><li><b>Play as Sunny or Freida</b> Sunny&#x27;s bone hunt, or Freida&#x27;s stealth mission to sit on every important object.</li><li><b>Trampoline Time 2P</b> Dad vs. Isaac on keyboard and controller, pass-and-play, or a ghost of your best run.</li><li><b>Sky Zone arena</b> Dodgeball, foam pit and a ninja course as new trampoline stages; a trick book and daily challenges.</li><li><b>Card Binder 2.0</b> A tiny turn-based card game that uses the family cards he&#x27;s collected.</li><li><b>Level editor</b> Isaac places ramps, cards and NPCs, then shares a level code with friends.</li><li><b>Photo-to-pixel</b> Turn real photos (the actual trampoline once it&#x27;s up, his new room) into backgrounds and sprites.</li><li><b>Family voice lines</b> Record Mom, Dad and Isaac in the browser for key dialog.</li><li><b>Installable + offline</b> PWA with a service worker, so it lives on the home screen and works in the car.</li><li><b>A birthday-reveal kit</b> Turn this into a config-driven template others can fork: names, photos, places, clues and the reveal item.</li></ul></div>
+
+<p class="foot">Made with love in Fargo, ND · Code: <a href="https://github.com/booherbg/isaacs-birthday-mystery-adventure">github.com/booherbg/isaacs-birthday-mystery-adventure</a> · Built with Claude (Claude Code)<br>Happy 8th birthday, Isaac. 🎂</p>
+</main></body></html>

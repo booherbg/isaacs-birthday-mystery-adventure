@@ -5,6 +5,8 @@ Find the clues, follow the trail, and solve the mystery!
 
 **Play:** https://blainebooher.com/isaacs-birthday-mystery-adventure/
 
+**How we built it (spoilers!):** https://blainebooher.com/isaacs-birthday-mystery-adventure/report.html
+
 - Works on phones (touch buttons), laptops (arrow keys + space) and USB/Bluetooth game controllers.
 - Your progress and high scores are saved in the browser.
 

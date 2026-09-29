@@ -316,3 +316,10 @@ button.big .note { display: block; font-size: 13px; font-weight: 600; opacity: .
 .touch .topbtns button { width: 40px; height: 40px; font-size: 18px; }
 .portrait #hud { font-size: 12px; }
 .portrait #toast { position: fixed; bottom: auto; top: calc(var(--stage-bottom) + 8px); }
+
+/* ---------- about ---------- */
+button.linkbtn { background: none; border: 0; color: #fff; text-decoration: underline; font-weight: 700; font-size: 13px; margin-top: 6px; padding: 6px 10px; opacity: .9; }
+button.linkbtn.sel { background: rgba(255, 255, 255, .15); border-radius: 8px; }
+.menu.about p { font-size: 16px; font-weight: 600; line-height: 1.4; text-align: left; margin: 8px 4px; }
+.report-link { display: inline-block; background: var(--blue); color: #fff; font-weight: 700; padding: 8px 14px; border-radius: 10px; text-decoration: none; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.locked-note { opacity: .7; font-style: italic; }

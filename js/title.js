@@ -33,7 +33,7 @@ export function titleScene() {
         <div class="title-wrap"><div class="logo">ISAAC'S<br class="pb"> <span>BIRTHDAY</span><br>MYSTERY<br class="pb"> ADVENTURE</div>
         <div class="tag">${d.done ? '★ MYSTERY SOLVED ★' : 'A MYSTERY IN 3 CLUES'}</div></div>
         <div class="title-btns">${btns.map((b) => `<button class="big ${b.cls || ''}" data-v="${b.v}">${b.label}</button>`).join('')}</div>
-        <div class="title-foot">${foot}</div>`, { cls: 'clear' });
+        <div class="title-foot">${foot}<br><button class="linkbtn" data-v="about">ⓘ About this game</button></div>`, { cls: 'clear' });
       audio.unlock();
       if (input.touchMode && (v === 'new' || v === 'continue' || v === 'story' || v === 'tramp')) {
         try { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch?.(() => {}); } catch {}
@@ -46,6 +46,7 @@ export function titleScene() {
       else if (v === 'continue') goStage(STAGES[d.stage]);
       else if (v === 'story') { save.set({ stage: 0, path: null }); goStage('room'); }
       else if (v === 'card') { await birthdayCard(); this.menu(); }
+      else if (v === 'about') { await aboutCard(); this.menu(); }
       else if (v === 'tramp') this.trampMenu();
       else this.menu();
     },
@@ -148,5 +149,18 @@ export async function birthdayCard() {
       ${(save.data.binder || []).length ? `<p>🃏 You collected <b>${save.data.binder.length} of 12</b> trading cards!</p>` : ''}
       <p class="sign">${CONFIG.cardSign}</p></div></div>`,
     buttons: [{ v: 'ok', label: '🎉 YAY! 🎉', cls: 'go' }],
+  });
+}
+
+// ---------------- about ----------------
+export async function aboutCard() {
+  const solved = save.data.done;
+  await menu({
+    title: 'ABOUT THIS GAME', cls: 'about',
+    body: `${CONFIG.about.map((p) => `<p>${p}</p>`).join('')}
+      ${solved
+        ? `<p><a class="report-link" href="${CONFIG.reportUrl}" target="_blank" rel="noopener">🛠️ For grown-ups: how we made this →</a></p>`
+        : '<p class="locked-note">🔒 Solve the mystery to unlock the behind-the-scenes story!</p>'}`,
+    buttons: [{ v: 'ok', label: 'Back', cls: 'go' }],
   });
 }
