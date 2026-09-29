@@ -10,6 +10,7 @@ import { trampolineScene } from './tramp.js';
 import { battleScene } from './battle.js';
 import { battingScene } from './batting.js';
 import { save } from './save.js';
+import { VERSION } from './version.js';
 
 buildSprites();
 window.__game = game; // debug handle
@@ -58,6 +59,13 @@ cluesBtn.addEventListener('click', async (e) => {
 });
 for (const b of document.querySelectorAll('.topbtns button')) b.addEventListener('pointerdown', (e) => e.stopPropagation());
 
+// Tiny build stamp on the title screen (out of the way).
+const ver = $('#ver');
+try {
+  const t = VERSION.time ? new Date(VERSION.time) : null;
+  ver.textContent = 'v' + VERSION.sha + (t && !isNaN(t) ? ' · ' + t.toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
+} catch { ver.textContent = 'v' + VERSION.sha; }
+
 let lastTouch = null;
 layout();
 start({
@@ -66,6 +74,8 @@ start({
     if (input.touchMode !== lastTouch) { lastTouch = input.touchMode; layout(); }
     if (input.startPressed && game.scene?.name !== 'title') pauseMenu();
     const ov = document.getElementById('overlay'), menuOpen = !ov.hidden;
+    const onTitle = game.scene?.name === 'title';
+    if (ver.hidden === onTitle) ver.hidden = !onTitle;
     document.getElementById('topbtns').classList.toggle('dimmed', menuOpen && !ov.classList.contains('clear'));
     const playing = game.scene && game.scene.name !== 'title' && !menuOpen;
     const storyScene = playing && game.scene.name !== 'tramp';

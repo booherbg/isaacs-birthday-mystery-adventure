@@ -74,6 +74,8 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+#ver { position: fixed; right: max(8px, env(safe-area-inset-right)); bottom: max(6px, env(safe-area-inset-bottom)); z-index: 35; font: 600 10px ui-monospace, monospace; color: #fff; opacity: .3; pointer-events: none; letter-spacing: .3px; }
+#ver[hidden] { display: none; }
 #keyhint {
   position: fixed; left: 0; right: 0; text-align: center; font-size: 13px; color: rgba(255, 255, 255, .55);
   font-family: var(--round); font-weight: 600; font-size: 13px; letter-spacing: .3px; pointer-events: none;
