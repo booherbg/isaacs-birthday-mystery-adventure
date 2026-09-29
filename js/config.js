@@ -15,7 +15,7 @@ export const CONFIG = {
   about: [
     "Isaac's Birthday Mystery Adventure was made for Isaac's 8th birthday, fall 2026, to reveal a BIG surprise waiting at our new house.",
     'Dad dreamed it up and built it in one afternoon with Claude (an AI coding partner), with lots of help from Mom, Sunny, and Freida (well... maybe not Freida).',
-    'Every place in it is real: our old house, Brunsdale Fields, Dike East, the Red River at Lions Conservancy Park, Island Park Pool on 7th St, and the new house.',
+    'Every place in it is real: our old house, Brunsdale Fields, Dike East, the Red River at Lions Conservancy Park, Island Park Pool, and the new house.',
   ],
   reportUrl: 'report.html',
   clues: [

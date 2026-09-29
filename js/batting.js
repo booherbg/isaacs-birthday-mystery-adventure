@@ -15,7 +15,7 @@ const GROUND = 118, CONTACT_X = 84, CONTACT_Y = 94;
 
 export function battingScene() {
   const S = {
-    name: 'batting', parts: new Particles(), pops: new Pops(),
+    name: 'batting', dlgTop: true, parts: new Particles(), pops: new Pops(),
     ball: null, swing: 0, misses: 0, state: 'intro', dadPose: 'idle', worm: 0, hr: null, fireworks: [],
     enter() {
       audio.play('ballgame');

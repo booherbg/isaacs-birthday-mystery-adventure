@@ -5,6 +5,7 @@ import { PORTRAIT, SPR } from './sprites.js';
 import { CONFIG } from './config.js';
 import { save } from './save.js';
 import { binderHTML } from './cards.js';
+import { game } from './engine.js';
 
 const $ = (s) => document.querySelector(s);
 const el = {
@@ -45,18 +46,34 @@ export function layout() {
   const u = sw / 256;
   document.documentElement.style.setProperty('--u', u + 'px');
   document.documentElement.style.setProperty('--sw', sw + 'px');
-  const d = el.dialog.style;
-  if (portrait) {
-    Object.assign(d, { left: '10px', right: '10px', width: 'auto', top: top + sh + 12 + 'px', bottom: 'auto' });
-  } else {
-    const inset = Math.max(6, 6 * u);
-    Object.assign(d, { left: left + inset + 'px', width: sw - inset * 2 + 'px', right: 'auto', top: 'auto', bottom: vh - (top + sh) + inset + 'px' });
-  }
+  // Phones in landscape: the stage fills the screen, so the dialog must sit on top of the game.
+  el.app.classList.toggle('short', !portrait && vh <= 500);
+  geo = { portrait, top, left, sw, sh, vh, u };
   el.hint.style.top = top + sh + 6 + 'px';
   const tb = document.getElementById('topbtns'), inset = Math.max(4, Math.round(2 * u));
   tb.style.top = top + inset + 'px';
   tb.style.right = window.innerWidth - (left + sw) + inset + 'px';
   document.documentElement.style.setProperty('--stage-bottom', top + sh + 'px');
+  placeDialog();
+}
+let geo = null;
+// Where the dialog goes: under the stage in portrait; otherwise along the bottom of the stage,
+// except on short landscape screens in the walking levels, where it moves up into the sky so it
+// doesn't cover the characters standing on the ground (it stops short of the top-right buttons).
+// Scenes opt in with `dlgTop: true`.
+function placeDialog() {
+  if (!geo) return;
+  const { portrait, top, left, sw, sh, vh, u } = geo, d = el.dialog.style;
+  const up = !portrait && !!game.scene?.dlgTop && el.app.classList.contains('short');
+  el.dialog.classList.toggle('top', up);
+  if (portrait) return Object.assign(d, { left: '10px', right: '10px', width: 'auto', top: top + sh + 12 + 'px', bottom: 'auto' });
+  const inset = Math.max(6, 6 * u);
+  if (up) {
+    const tb = document.getElementById('topbtns').getBoundingClientRect();
+    const right = tb.width ? tb.left - 8 : left + sw - inset;
+    return Object.assign(d, { left: left + inset + 'px', width: right - left - inset + 'px', right: 'auto', top: top + inset + 'px', bottom: 'auto' });
+  }
+  Object.assign(d, { left: left + inset + 'px', width: sw - inset * 2 + 'px', right: 'auto', top: 'auto', bottom: vh - (top + sh) + inset + 'px' });
 }
 addEventListener('resize', layout);
 addEventListener('orientationchange', () => setTimeout(layout, 200));
@@ -147,6 +164,7 @@ export function say(who, text, { speed = 48 } = {}) {
   el.text.textContent = '';
   el.choices.innerHTML = '';
   el.dialog.hidden = false;
+  placeDialog();
   el.dialog.classList.remove('pop'); void el.dialog.offsetWidth; el.dialog.classList.add('pop');
   el.next.hidden = true;
   el.next.textContent = input.touchMode ? 'NEXT ▶' : input.padConnected ? btnName('a').replace('button ', '') + ' ▶' : 'SPACE ▶';

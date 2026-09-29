@@ -114,6 +114,15 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #dlg-next[hidden] { display: none; }
 @keyframes nudge { to { transform: translateX(4px); } }
 #dialog { cursor: pointer; }
+/* Phones in landscape: a slimmer dialog (and, in the walking levels, it rides up top — see placeDialog). */
+.short #dialog { font-size: 15px; min-height: 0; padding: 6px 10px 8px 6px; gap: 8px; border-radius: 10px; }
+.short #portrait { width: 50px; height: 50px; border-width: 2px; border-radius: 8px; }
+.short #dlg-name { margin-bottom: 2px; }
+.short #dlg-text { min-height: 2.4em; }
+.short .choice { min-height: 40px; padding: 6px 10px; }
+.short #dlg-next { bottom: -12px; padding: 2px 10px 3px; font-size: 12px; }
+#dialog.top.pop { animation-name: dlgDrop; }
+@keyframes dlgDrop { from { transform: translateY(-8px) scale(.97); opacity: .4; } }
 @keyframes bob { to { transform: translateY(4px); } }
 #dlg-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 #dlg-choices:empty { display: none; }
@@ -325,3 +334,5 @@ button.linkbtn.sel { background: rgba(255, 255, 255, .15); border-radius: 8px; }
 .menu.about p { font-size: 16px; font-weight: 600; line-height: 1.4; text-align: left; margin: 8px 4px; }
 .report-link { display: inline-block; background: var(--blue); color: #fff; font-weight: 700; padding: 8px 14px; border-radius: 10px; text-decoration: none; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
 .locked-note { opacity: .7; font-style: italic; }
+/* the goal line would peek out above a top-docked dialog */
+#app:has(#dialog.top:not([hidden])) #hud { visibility: hidden; }

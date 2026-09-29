@@ -285,6 +285,20 @@ export class World {
     if (d.walkTo) {
       const dx = d.walkTo.x - d.x;
       if (Math.abs(dx) < 2) { d.walkTo = null; d.vx = 0; } else { d.vx = Math.sign(dx) * d.walkTo.speed; d.face = Math.sign(dx); }
+    } else if (d.lead && !d.stay) {
+      // Scout mode: trot a little ahead of Isaac toward d.lead.x, and when he dawdles, do the classic
+      // dog "come ON, this way!" — hop, bark at the goal, look back at him.
+      const goal = Math.min(d.lead.x, p.x + 84), dx = goal - d.x;
+      if (Math.abs(dx) > 6) { d.vx = clamp(dx * 3, -150, 150); d.face = Math.sign(dx); d.nag = 0; }
+      else {
+        d.vx *= 0.8;
+        d.nag = (d.nag || 0) + dt;
+        if (d.onGround) d.face = d.nag < 0.8 ? 1 : p.x < d.x ? -1 : 1;
+        if (d.nag > 1.9 && d.onGround && !this.locked && !ui.busy && p.vx < 10) {
+          d.nag = 0; d.vy = -170; d.onGround = false; d.face = 1;
+          audio.sfx('bark', { n: 1 }); this.pops.add(d.lead.say || 'ARF!', d.x + 6, d.y - 20, '#fff');
+        }
+      }
     } else if (!d.stay) {
       const tx = p.x - 22 * p.face;
       const dx = tx - d.x;

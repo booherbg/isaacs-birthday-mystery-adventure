@@ -30,7 +30,7 @@ export function goStage(name, arg) {
 function levelScene(def) {
   let w;
   return {
-    name: def.id,
+    name: def.id, dlgTop: true,
     enter(arg = {}) {
       w = new World(def);
       w.arg = arg;
@@ -666,10 +666,10 @@ function startBrook() {
 function stopBrook() { clearInterval(brookTimer); }
 
 // =====================================================================================
-// 4. ISLAND PARK POOL — on 7th St
+// 4. ISLAND PARK POOL
 // =====================================================================================
 const pool = {
-  id: 'pool', title: 'ISLAND PARK POOL', sub: '7th St · Find Clue #3', music: 'pool',
+  id: 'pool', title: 'ISLAND PARK POOL', sub: 'Find Clue #3', music: 'pool',
   width: 1320, ground: 120, startX: 40, item: 'card',
   props: [[180, 22, 7, 'lounge'], [206, 22, 7, 'lounge'], [430, 22, 7, 'lounge'], [612, 10, 30, 'guard'], [790, 22, 7, 'lounge'], [816, 22, 7, 'lounge']],
   bouncers: [[292, 86, 34, 330, 'umbrella'], [506, 82, 34, 360, 'umbrella'], [900, 84, 34, 340, 'umbrella'], [1060, 80, 34, 380, 'umbrella']],
@@ -725,7 +725,7 @@ const pool = {
       else { rect(rx + 3, g - 14, 2, 14, '#2a1f33'); rect(rx + 3, g - 14, 1, 13, '#e8752a'); }
     }
     // street sign
-    const x = 60 - cx; if (x > -80 && x < W) A.sign(x, g, ['7TH ST', 'ISLAND PARK POOL'], { bg: '#3d7be0' });
+    const x = 60 - cx; if (x > -80 && x < W) A.sign(x, g, ['ISLAND PARK', 'POOL'], { bg: '#3d7be0' });
   },
   drawSolid(s, cx, w) {
     const x = s.x0 - cx, ww = s.x1 - s.x0;
@@ -778,7 +778,7 @@ const newhouse = {
       else { audio.sfx('bark', { n: 1 }); w.pops.add('ACHOO!', w.dog.x, w.dog.y - 18, '#fff'); await say('sunny', 'AH-CHOO! (Sunny is allergic to fancy talking flowers.)'); }
       w.locked = false;
     } },
-    { x: 246, y: 82, r: 12, label: 'KNOCK', fn: async (w) => { w.locked = true; audio.sfx('bump'); await wait(0.25); audio.sfx('bump'); await say('isaac', "Knock knock! ...Nobody's answering. Everybody must be out in the BACKYARD!"); w.locked = false; } },
+    { x: 246, y: 82, r: 12, label: 'KNOCK', fn: async (w) => { w.locked = true; audio.sfx('bump'); await wait(0.25); audio.sfx('bump'); await say('isaac', `Knock knock! ...Nobody's answering. Everybody must be out BACK! Lead the way, ${CONFIG.dog}!`); w.locked = false; } },
   ],
   setup(w) {
     w.gate = 0;
@@ -786,8 +786,12 @@ const newhouse = {
     w.npc('mom', SPR.mom, 700, { face: 1 });
     w.npc('dad', SPR.dad, 836, { face: -1 });
     w.npc('freida', SPR.freida, 730, { face: -1, pose: 'loaf' });
-    w.triggers.push({ x: 150, fn: () => say('isaac', 'Our NEW HOUSE! The surprise is in the BACKYARD... through the gate!') });
-    w.triggers.push({ x: 520, fn: () => { w.gateOpening = true; audio.sfx('whoosh'); } });
+    // Players kept trying the front door (or the gap by the fence), so: Sunny scouts ahead to the gate
+    // and barks "this way!", balloons + a sign mark the gate, and an arcade GO > blinks if Isaac stalls.
+    w.dog.lead = { x: 538 };
+    w.bestX = w.p.x; w.movedT = game.t;
+    w.triggers.push({ x: 150, fn: () => say('isaac', `Our NEW HOUSE! The surprise is around BACK... through the side gate! ${CONFIG.dog} knows the way!`) });
+    w.triggers.push({ x: 520, fn: () => { w.gateOpening = true; w.dog.lead.x = 626; audio.sfx('whoosh'); } });
     w.triggers.push({ x: 640, fn: () => reveal(w) });
   },
   bg(cx, cy, w) {
@@ -821,6 +825,14 @@ const newhouse = {
     const gw = Math.round(26 * (1 - open * 0.85));
     rect(gx, w.ground - 34, gw, 34, '#a8743f'); rect(gx, w.ground - 34, gw, 2, '#d19b64'); rect(gx, w.ground - 20, gw, 2, '#8f6038');
     rect(gx + 26, w.ground - 36, 3, 36, '#8f6038');
+    // party balloons tied to the gate post + a sign on the fence: this way!
+    for (const [i, dx, h, c] of [[0, -7, 26, '#ff5d73'], [1, 1, 34, '#ffd23f'], [2, 9, 24, '#3ec1ff']]) {
+      const bx = gx + 27 + dx + Math.sin(game.t * 1.7 + i * 2) * 2, by = w.ground - 36 - h + Math.sin(game.t * 2.3 + i) * 1.5;
+      for (let k = 0; k < h - 4; k++) rect(gx + 27 + ((bx - gx - 27) * k) / (h - 4), w.ground - 36 - k, 1, 1, '#f4f0e6');
+      ellipse(bx, by, 4, 5, '#2a1f33'); ellipse(bx, by, 3, 4, c); rect(bx - 2, by - 3, 1, 2, '#ffffff'); rect(bx - 1, by + 5, 2, 1, c);
+    }
+    const sx = 466 - cx;
+    if (sx > -50 && sx < W) { rect(sx, w.ground - 29, 49, 11, '#2a1f33'); rect(sx + 1, w.ground - 28, 47, 9, '#fffbea'); pixelText('BACKYARD >', sx + 5, w.ground - 26, '#e8483f'); }
     // present / trampoline
     const pr = w.present;
     if (!pr.open) A.present(pr.x - cx, w.ground, pr.stage, pr.t);
@@ -834,6 +846,14 @@ const newhouse = {
     }
   },
   overlay(cx, w) {
+    // Arcade-style blinking GO > when Isaac stops making progress toward the gate.
+    if (w.p.x > w.bestX + 2) { w.bestX = w.p.x; w.movedT = game.t; }
+    if (!w.gateOpening && !w.locked && !ui.busy && game.t - w.movedT > 3 && Math.floor(game.t * 2.5) % 2) {
+      const gx = W - 44, gy = 58;
+      pixelText('GO', gx, gy, '#ffde5c', 2, '#2a1f33');
+      rect(gx + 17, gy + 2, 10, 7, '#2a1f33'); tri(gx + 25, gy - 3, gx + 25, gy + 13, gx + 34, gy + 5, '#2a1f33');
+      rect(gx + 18, gy + 3, 9, 5, '#ffde5c'); tri(gx + 26, gy - 1, gx + 26, gy + 11, gx + 32, gy + 5, '#ffde5c');
+    }
     if (w.fireworks) for (const f of w.fireworks) {
       f.t += 1 / 60;
       if (f.t > 1.4) continue;
@@ -842,7 +862,7 @@ const newhouse = {
   },
 };
 async function reveal(w) {
-  w.locked = true;
+  w.locked = true; w.dog.lead = null;
   await w.playerTo(700, 60);
   const mom = w.npcs.mom, dad = w.npcs.dad;
   mom.x = 676; mom.face = 1;

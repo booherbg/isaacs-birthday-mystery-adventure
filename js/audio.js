@@ -196,12 +196,59 @@ const INST = {
   chord: { type: 'p50', vol: 0.05, short: true },
   bell: { type: 'sine', vol: 0.14 },
   arp: { type: 'p12', vol: 0.08, short: true },
+  // Richer voices (title theme): Commodore-style chord arps + filter-swept bass, Final Fantasy-style harp + countermelody.
+  hero: { type: 'p25', vol: 0.12, vib: 5, vibDelay: 0.16, dbl: ['p12', 0.05, 9] },
+  harm: { type: 'p50', vol: 0.05, vib: 4, vibDelay: 0.2, attack: 0.05 },
+  sid: { type: 'p25', vol: 0.045, arp: 1 / 36, decay: 0.25, sus: 0.5 },
+  harp: { type: 'p12', vol: 0.065, pluck: 0.45 },
+  sbass: { type: 'triangle', vol: 0.3, buzz: 0.07 },
 };
-function playNote(inst, f, t, dur, extra = 1) {
+function playNote(inst, fs, t, dur, extra = 1) {
   const I = INST[inst];
   const d = I.short ? Math.min(dur, 0.12) : dur * 0.92;
-  const o = osc(I.type, f, t, d, I.vol * extra, { dest: musicBus, attack: 0.008, release: Math.min(0.08, d * 0.3), vib: I.vib ? f * I.vib / 1000 : 0, vibRate: 5.5 });
-  return o;
+  const vol = I.vol * extra;
+  // SID trick: one voice flicks through the chord's notes fast enough to sound like a shimmering chord.
+  if (I.arp) return voice(I.type, fs[0], t, d, vol, { steps: fs, stepT: I.arp, decay: I.decay, sus: I.sus });
+  for (const f of fs) {
+    const vib = I.vib ? f * I.vib / 1000 : 0;
+    if (I.pluck) voice(I.type, f, t, d, vol, { pluck: I.pluck, attack: 0.003 });
+    else if (I.buzz) { voice(I.type, f, t, d, vol); voice('p50', f, t, d, I.buzz * extra, { sweep: 1800, decay: 0.15, sus: 0.35 }); }
+    else if (I.vibDelay) {
+      voice(I.type, f, t, d, vol, { vib, vibDelay: I.vibDelay, attack: I.attack });
+      if (I.dbl) voice(I.dbl[0], f, t, d, I.dbl[1] * extra, { vib, vibDelay: I.vibDelay, cents: I.dbl[2], attack: I.attack });
+    } else osc(I.type, f, t, d, vol, { dest: musicBus, attack: 0.008, release: Math.min(0.08, d * 0.3), vib, vibRate: 5.5 });
+  }
+}
+// One music voice with the extras the plain osc() lacks: delayed vibrato, detune, a sweeping low-pass,
+// decay-to-sustain, plucks that ring past the step, and fast note-stepping for chord arps.
+function voice(type, f, t, dur, vol, { attack = 0.008, release = 0.06, decay = 0, sus = 1, pluck = 0, vib = 0, vibDelay = 0, cents = 0, sweep = 0, steps = null, stepT = 0 } = {}) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  if (waves[type]) o.setPeriodicWave(waves[type]); else o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  if (cents) o.detune.setValueAtTime(cents, t);
+  const end = pluck ? t + attack + pluck : t + dur;
+  if (steps) for (let k = 1, tt = t + stepT; tt < end; k++, tt += stepT) o.frequency.setValueAtTime(steps[k % steps.length], tt);
+  if (vib) {
+    const l = ac.createOscillator(), lg = ac.createGain();
+    l.frequency.value = 5.5;
+    lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + vibDelay); lg.gain.linearRampToValueAtTime(vib, t + vibDelay + 0.15);
+    l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(end + release);
+  }
+  let src = o;
+  if (sweep) {
+    const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = 7;
+    fl.frequency.setValueAtTime(sweep, t); fl.frequency.exponentialRampToValueAtTime(Math.max(150, f * 2), t + Math.min(0.2, dur));
+    o.connect(fl); src = fl;
+  }
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + attack);
+  if (pluck) g.gain.exponentialRampToValueAtTime(0.0001, end);
+  else {
+    if (decay) g.gain.setTargetAtTime(vol * sus, t + attack, decay / 3);
+    g.gain.setTargetAtTime(0, Math.max(t + attack, end - release), release / 3);
+  }
+  src.connect(g); g.connect(musicBus); g.connect(echoSend);
+  o.start(t); o.stop(end + (pluck ? 0.02 : release));
 }
 function drum(ch, t) {
   if (ch === 'k') { osc('sine', 150, t, 0.12, 0.5, { to: 45, dest: musicBus }); }
@@ -233,7 +280,7 @@ function schedule() {
     for (const tr of cur.tracks) {
       const e = tr.byStep.get(s.loop === false ? step : step % tr.len);
       if (!e) continue;
-      for (const f of e.f) playNote(tr.inst, f, cur.next, e.len * cur.dt, tr.extra);
+      playNote(tr.inst, e.f, cur.next, e.len * cur.dt, tr.extra);
     }
     if (s.drums) { const ch = s.drums[step % s.drums.length]; if (ch !== '.') drum(ch, cur.next); }
     cur.step++; cur.next += cur.dt;
@@ -254,12 +301,21 @@ const CH = {
 const waltz = (chords, beat = 1) => chords.map((c) => `r:${beat} ${CH[c]}:${beat} ${CH[c]}:${beat}`).join(' ');
 
 export const SONGS = {
-  // Original "adventure" theme — title + walking levels.
+  // Original "adventure" theme — title, Isaac's room, home, the new house.
+  // A: the hero tune over Commodore-style chord arps + a buzzy filtered bass.
+  // B: a Final Fantasy-ish bridge — half-time drums, harp arpeggios, a countermelody, walking bass.
   title: {
-    bpm: 132, drums: 'khshkksh',
+    bpm: 132, echo: 0.14,
+    drums: 'khshkksh'.repeat(7) + 'khshksss' + 'k.h.s.h.'.repeat(7) + 'k.s.ssss',
     tracks: [
-      ['lead', 'C5:2 E5 G5 C6:2 G5:2 A5:3 G5 E5:2 C5:2 D5:2 F5 A5 D6:2 C6 A5 G5:6 r:2 C5:2 E5 G5 C6:2 E6:2 D6:3 C6 A5:2 F5:2 A5 B5 C6:2 B5 G5 D6:2 C6:6 r:2'],
-      ['bass', bounce(['C3', 'A2', 'D3', 'G2', 'C3', 'F2', 'G2', 'C3'])],
+      ['hero', 'C5:2 E5 G5 C6:2 G5:2 A5:3 G5 E5:2 C5:2 D5:2 F5 A5 D6:2 C6 A5 G5:6 r:2 C5:2 E5 G5 C6:2 E6:2 D6:3 C6 A5:2 F5:2 A5 B5 C6:2 B5 G5 D6:2 C6:6 r:2 ' +
+        'F5:2 A5 C6:3 A5 C6 D6:2 B5 G5:3 A5 B5 C6:2 B5 G5:2 E5:2 G5 A5:6 r:2 F5:2 A5 D6:3 C6 A5 B5:2 G5 D6:3 C6 B5 C6:2 E6 D6 C6:2 A5 G5 G5:3 F5 E5 D5 B4 G4'],
+      ['sid', ['C', 'Am', 'Dm', 'G', 'C', 'F', 'G', 'C'].map((c) => `${CH[c]}:3 ${CH[c]}:3 ${CH[c]}:2`).join(' ') + ' r:64'],
+      ['harm', 'r:64 A4:4 C5:4 B4:4 D5:4 E5:4 B4:4 C5:4 E5:4 D5:4 F5:4 D5:4 B4:4 E5:4 C5:4 B4:4 D5:2 F5:2'],
+      ['harp', 'r:64 F4 A4 C5 F5 A5 F5 C5 A4 G4 B4 D5 G5 B5 G5 D5 B4 E4 G4 B4 E5 G5 E5 B4 G4 A4 C5 E5 A5 C6 A5 E5 C5 ' +
+        'D4 F4 A4 D5 F5 D5 A4 F4 G4 B4 D5 G5 B5 G5 D5 B4 C5 E5 G5 C6 A4 C5 E5 A5 G4 B4 D5 F5 G5 F5 D5 B4'],
+      ['sbass', bounce(['C3', 'A2', 'D3', 'G2', 'C3', 'F2', 'G2', 'C3']) + ' ' +
+        'F2:2 C3:2 F3:2 C3:2 G2:2 D3:2 G3:2 D3:2 E2:2 B2:2 E3:2 B2:2 A2:2 E3:2 A3:2 E3:2 D2:2 A2:2 D3:2 A2:2 G2:2 D3:2 G3:2 D3:2 C3:2 G2:2 A2:2 E2:2 G2:2 B2:2 D3:2 F3:2'],
     ],
   },
   // Take Me Out to the Ball Game (1908, public domain), 3/4, stadium-organ waltz.
