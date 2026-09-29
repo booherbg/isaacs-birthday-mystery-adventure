@@ -31,6 +31,8 @@ export const TRACKS = [
   { id: 'tonie3', name: 'Ball Game Boogie', where: "Isaac's Toniebox (tap it three times)",
     about: 'The ballpark song on a honky-tonk piano: two voices slightly out of tune with each other, so every note shimmers, over an oom-pah bass.' },
   { id: 'win', name: 'Victory!', where: 'After a battle or the Cannonball Contest', about: 'A quick RPG-style victory fanfare.' },
+  { id: 'restitution', name: 'Restitution', where: 'Nowhere in the game. A bonus track Claude wrote in its free time',
+    about: "Rhythm from physics, not a metronome. Every bounce keeps only part of its speed (the \"coefficient of restitution\"), so a dropped ball speeds up and settles: pok… pok.. pokpokbrrr. The first ball's first bounce lasts 0.8 seconds, and that's the song's tempo. Played backwards, the same ball is a kid pumping on a trampoline. In the tune, the kick lands with every bounce, the snare is a trick at the top, and the big jump's melody is its own flight path. Then it all comes back compacted, and one last jump never comes down." },
 ];
 
 // Voice names + colors (shared by the legend and the piano roll).
@@ -39,6 +41,7 @@ const VOICES = {
   harm: ['Countermelody', '#c9b6ff'], sid: ['C64 chord arp', '#ff7d98'], arp: ['Arpeggio', '#ff7d98'], chord: ['Organ chords', '#ff7d98'],
   harp: ['Harp', '#8fdcff'], bell: ['Music box', '#8fdcff'], soft: ['Soft pulse', '#8fdcff'], steel: ['Steel drum', '#8fdcff'],
   bass: ['Triangle bass', '#9fe35f'], sbass: ['Filter bass', '#9fe35f'], drum: ['Drums', '#ffffff'],
+  ball: ['Bouncing balls', '#ff9f43'], bed: ['Trampoline bed', '#4fd6b0'],
   tine: ['Music-box tine', '#8fdcff'], kalimba: ['Kalimba', '#8fdcff'], toypiano: ['Toy piano', '#ffde5c'], honky: ['Honky-tonk piano', '#ffde5c'],
 };
 const DRUM_COLOR = { k: '#ff6a5a', s: '#ffffff', h: '#b8b0cc', o: '#d6d0e6', t: '#ffb15c', c: '#ffde5c', w: '#e0843f' };

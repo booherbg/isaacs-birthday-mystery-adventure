@@ -246,7 +246,10 @@ export function trampolineScene({ story = false, timed = true } = {}) {
     },
     updateCam(dt) {
       const p = this.p, falling = p.vy > 0;
-      const target = Math.min(0, p.y - 64 + (falling ? Math.min(50, p.vy * 0.1) : 0));
+      let target = Math.min(0, p.y - 64 + (falling ? Math.min(50, p.vy * 0.1) : 0));
+      // The camera eases up behind him, so it used to still be climbing after a low bounce peaked.
+      // Once he's on the way down, it only follows down.
+      if (falling) target = Math.max(target, this.camY);
       this.camY = lerp(this.camY, target, Math.min(1, dt * (falling ? 18 : 6)));
     },
     exit() { tip(''); },

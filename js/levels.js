@@ -94,12 +94,15 @@ const room = {
   inter: [
     { x: 154, y: 96, r: 10, label: 'PLAY ♪', fn: playTonie },
     { x: 177, y: 34, r: 12, label: 'THWIP!', fn: thwip },
-    { x: 222, px: 234, y: 84, r: 12, label: 'SWING', fn: batterUp },
+    // Fetch: a tennis ball on the rug, well away from the door (the old bat swing sat by the exit and fired on the way out).
+    // It's just a ball on the floor until Mom has talked, so it can't swallow his first jumps.
+    { x: 128, y: 118, r: 12, label: 'THROW', fn: throwBall, hidden: true, fetch: true },
   ],
   setup(w) {
     w.bunny = { x: 58, y: 100, got: false };
     w.pack = false;
     w.dog.x = 170; w.dog.pose = 'sit'; w.dog.stay = true;
+    w.fetch = { state: 'rest', x: 128, y: 121, n: 0 };
     w.npc('mom', SPR.mom, 280, { face: -1, hidden: true });
     w.goal = 'Grab Big Bunny!';
     w.triggers.push({ x: 236, fn: () => exitRoom(w) });
@@ -129,6 +132,7 @@ const room = {
     w.locked = false;
     w.goal = 'Go outside →';
     w.bedQuip = true;
+    if (w.fetch.state === 'rest') w.inter.find((i) => i.fetch).hidden = false;
   },
   update: null,
   mid(cx, w) {
@@ -145,6 +149,7 @@ const room = {
       }
     }
     roomToys(w, cx);
+    updateFetch(w);
     if (w.p.bounced && w.bedQuip) { w.bedQuip = false; say('mom', "I know how much you LOVE to bounce... but let's not jump on the bed, please!"); }
   },
   bg(cx, cy, w) {
@@ -192,6 +197,7 @@ const room = {
     for (let i = 0; i < 3; i++) rect(151 + i * 2, 103, 1, 3, '#a81f2a');
     if (Math.abs(w.p.x - 155) < 20 && game.frame % 50 < 25) pixelText('♥', 152, 88, '#ff7d98');
   },
+  fg(cx, w) { drawFetch(w, cx); },
 };
 // ---- hidden fun in Isaac's room ----
 const TONIE = [['tonie1', 'TWINKLE TWINKLE'], ['tonie2', "SUNNY'S BARK SONG"], ['tonie3', 'BALL GAME BOOGIE']];
@@ -209,15 +215,68 @@ function thwip(w) {
   audio.sfx('whoosh'); audio.sfx('flip');
   w.pops.add('THWIP!', p.x, p.y - 30, '#ff5d73');
 }
-function batterUp(w) {
-  const p = w.p;
+// Fetch: throw the ball (A), Sunny runs it down (catching it if it's low enough), sometimes does a zoomies lap,
+// and drops it back at Isaac's feet (never by the door) so he can go again.
+function throwBall(w) {
+  const p = w.p, f = w.fetch;
+  if (f.state !== 'rest') return;
   p.pose = 'back'; setTimeout(() => (p.pose = null), 250);
-  audio.sfx('crack');
-  w.pops.add('BATTER UP!', p.x, p.y - 30, '#fff');
-  w.toyBall = { x: p.x - 6, y: p.y - 14, vx: -170, vy: -150, bounces: 0, rest: 0 };
+  audio.sfx('whoosh');
+  Object.assign(f, { state: 'fly', x: p.x + 6 * p.face, y: p.y - 16, vx: p.face * rand(150, 210), vy: -rand(150, 230), rolling: false, zoom: null });
+  w.inter.find((i) => i.fetch).hidden = true;
+  w.dog.stay = true; w.dog.pose = null;
+}
+function updateFetch(w) {
+  const f = w.fetch, d = w.dog, p = w.p, dt = 1 / 60;
+  if (!f || f.state === 'rest') return;
+  const mouth = () => d.x + 9 * d.face;
+  // Walk so her mouth (not her middle) ends up at x; face it once there.
+  const fetchTo = (x, speed) => {
+    const dir = Math.sign(x - d.x) || d.face, stand = x - 9 * dir;
+    if (Math.abs(d.x - stand) < 3) { d.walkTo = null; d.vx = 0; d.face = dir; return true; }
+    d.walkTo = { x: stand, speed };
+    return false;
+  };
+  if (f.state === 'fly') {
+    if (f.rolling) { f.vx *= 0.95; if (Math.abs(f.vx) < 4) f.vx = 0; }
+    else { f.vy += 600 * dt; f.y += f.vy * dt; }
+    f.x += f.vx * dt;
+    if (f.x < 6 || f.x > 250) { f.vx *= -0.8; f.x = clamp(f.x, 6, 250); audio.sfx('tennis', { v: 0.3 }); }
+    if (f.y < 4) f.vy = Math.abs(f.vy);
+    if (!f.rolling && f.y > 121) { // each bounce keeps 62% of its speed, and sounds like the balls in Restitution
+      audio.sfx('tennis', { v: Math.min(1, f.vy / 280) });
+      f.y = 121; f.vy *= -0.62; f.vx *= 0.85;
+      if (f.vy > -40) { f.rolling = true; f.vy = 0; }
+    }
+    fetchTo(f.x, 165);
+    if (Math.abs(mouth() - f.x) < 7 && Math.abs(d.y - 9 - f.y) < 9) {
+      f.state = 'carry';
+      if (f.n % 5 === 3 || Math.random() < 0.12) { f.zoom = f.x < 128 ? [236, 20] : [20, 236]; w.pops.add('ZOOMIES!', d.x, d.y - 20, '#ffde5c'); }
+    }
+  } else if (f.state === 'carry') {
+    if (f.zoom?.length) {
+      d.walkTo = { x: f.zoom[0], speed: 230 };
+      if (Math.abs(d.x - f.zoom[0]) < 4) f.zoom.shift();
+    } else if (fetchTo(clamp(p.x + 7 * p.face, 30, 200), 130)) {
+      Object.assign(f, { state: 'rest', x: mouth(), y: 121 });
+      f.n++;
+      const it = w.inter.find((i) => i.fetch);
+      it.x = f.x; it.hidden = false;
+      d.stay = false;
+      audio.sfx('bark', { n: 1 });
+      w.pops.add(f.n === 1 ? 'GOOD PUP!' : `FETCH x${f.n}!`, d.x, d.y - 20, '#fff');
+      if (f.n === 1) toast(`${CONFIG.dog} brought it back! Throw it again!`, 2400);
+    }
+  }
+}
+function drawFetch(w, cx) {
+  const f = w.fetch, d = w.dog;
+  if (!f) return;
+  const x = f.state === 'carry' ? d.x + 9 * d.face : f.x, y = f.state === 'carry' ? d.y - 9 : f.y;
+  spr(SPR.tennis, Math.round(x - cx) - 3, Math.round(y) - 3);
 }
 function roomToys(w, cx) {
-  const dt = 1 / 60, d = w.dog;
+  const d = w.dog;
   if (w.tonie) {
     if (game.t > w.tonie.next) {
       w.tonie.next = game.t + 0.42;
@@ -229,17 +288,6 @@ function roomToys(w, cx) {
     const age = game.t - w.web.t;
     if (age > 0.55) w.web = null;
     else { const p = w.p; G.strokeStyle = '#ffffff'; G.lineWidth = 1; G.beginPath(); G.moveTo(p.x - cx + 4 * p.face, p.y - 18); G.lineTo(w.web.x - cx, 0); G.stroke(); }
-  }
-  const b = w.toyBall;
-  if (b) {
-    if (!b.rest) {
-      b.vy += 600 * dt; b.x += b.vx * dt; b.y += b.vy * dt;
-      if (b.x < 6 || b.x > 250) { b.vx *= -0.8; b.x = clamp(b.x, 6, 250); audio.sfx('bump'); }
-      if (b.y < 4) { b.vy = Math.abs(b.vy); audio.sfx('bump'); }
-      if (b.y > 121) { b.y = 121; b.vy *= -0.62; b.vx *= 0.8; b.bounces++; audio.sfx('bump'); if (b.bounces > 5) b.rest = game.t; }
-      d.stay = true; d.walkTo = { x: b.x, speed: 130 };
-    } else if (game.t - b.rest > 1.2) { w.toyBall = null; d.stay = false; d.walkTo = null; audio.sfx('bark', { n: 2 }); w.pops.add('GOT IT!', d.x, d.y - 18, '#fff'); }
-    if (w.toyBall) spr(SPR.baseball, b.x - 2 - cx, b.y - 2);
   }
 }
 

@@ -503,6 +503,7 @@ const STAR = [
 ];
 const HEART = ['.rr.rr.', 'rrwrrrr', 'rrrrrrr', '.rrrrr.', '..rrr..', '...r...'];
 const BASEBALL = ['.www.', 'wrwrw', 'wwwww', 'wrwrw', '.www.'];
+const TENNIS = ['.nnn.', 'wwnnn', 'nnwwn', 'nnnnw', '.NNN.'];
 const DIAMOND = ['.aAa.', 'aAaaa', 'aaaAa', '.aaa.', '..a..'];
 const CLUE = [
   'CcccccccC',
@@ -625,7 +626,7 @@ export function buildSprites() {
     dad: { idle: build(DAD('b')), walk: build(DAD('a')), pitch: build(DAD('b', 'pitch')), cheer: build(DAD('b', 'up')) },
     sunny: { stand: build(SUNNY.stand), run1: build(SUNNY.run1), run2: build(SUNNY.run2), sit: build(SUNNY.sit) },
     freida: { loaf: build(FREIDA.loaf), walk1: build(FREIDA.walk1), walk2: build(FREIDA.walk2) },
-    card: build(CARD), star: build(STAR), heart: build(HEART), baseball: build(BASEBALL), diamond: build(DIAMOND),
+    card: build(CARD), star: build(STAR), heart: build(HEART), baseball: build(BASEBALL), tennis: build(TENNIS, { pal: { ...PAL, n: '#d9ee4c', N: '#aac22a' } }), diamond: build(DIAMOND),
     clue: build(CLUE), balloon: build(BALLOON8), cupcake: build(CUPCAKE), catfish: build(CATFISH), fish: build(FISH), goldeye: build(GOLDEYE), heron: build(HERON),
     bunny: build(BUNNY), bow: build(PRESENT_BOW), creeper: build(CREEPER), goose: build(GOOSE),
   });

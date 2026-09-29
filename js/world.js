@@ -536,7 +536,8 @@ export function drawWorm(x, y, t, flip = false) {
 
 // Green backpack with Big Bunny peeking out (drawn behind Isaac).
 // Design E from the bunny board (report/bunny-board.html): he ducks + pops back up when Isaac
-  // turns around, blinks, bobs with steps, and his ears flop with running, stopping and jumping.
+// turns around, blinks, bobs with steps, and his ears flop with running, stopping and jumping.
+// The pack is drawn mirrored so +x points the way Isaac faces; the ears lean the other way (they trail).
 // `st` is the player (per-rider state lives on it); physics steps at the game's 60fps like drawWorm.
 export function drawPack(x, y, flip, anim = 0, st = {}) {
   const dt = 1 / 60, face = flip ? -1 : 1;
@@ -544,7 +545,7 @@ export function drawPack(x, y, flip, anim = 0, st = {}) {
   st.packFace = face;
   st.packTurn = Math.max(0, (st.packTurn || 0) - dt);
   const speed = Math.abs(st.vx || 0), air = st.onGround === false;
-  const target = 0.25 + Math.min(1, speed / 90) * 0.7 + (air ? (st.vy < 0 ? 0.8 : -0.3) : 0);
+  const target = 0.15 + Math.min(1, speed / 90) * 0.7 + (air ? (st.vy < 0 ? 0.8 : -0.3) : 0);
   st.ear ??= 0.4; st.earV ??= 0;
   st.earV += ((target - st.ear) * 90 - st.earV * 7) * dt; st.ear += st.earV * dt;
   if (speed < 5 && st.packMoving) st.earV -= 7; // stopping: ears swing forward
@@ -555,7 +556,7 @@ export function drawPack(x, y, flip, anim = 0, st = {}) {
   G.save(); G.translate(Math.round(x), Math.round(y)); G.scale(face, 1);
   G.drawImage(B.pack, px, top);
   G.save(); G.beginPath(); G.rect(-24, -44, 24, 44 + top + 1); G.clip(); // tucked below the rim while ducking
-  for (const [ex, tilt] of [[hx + 1, -0.05], [hx + 5, 0.12]]) bunnyEar(ex, hy + 1, st.ear + tilt);
+  for (const [ex, tilt] of [[hx + 1, -0.12], [hx + 5, 0.05]]) bunnyEar(ex, hy + 1, tilt - st.ear);
   G.drawImage((game.t % 3.1) < 0.13 ? B.blink : B.face, hx, hy);
   G.restore();
   G.drawImage(B.pack, px, top);

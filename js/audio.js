@@ -113,6 +113,11 @@ const SFX = {
   card: (t) => { arp(t, ['E6', 'B6'], 0.06, 'p25', 0.14); osc('sine', freq('E7'), t + 0.1, 0.25, 0.06); },
   coin: (t) => arp(t, ['B5', 'E6'], 0.06, 'p50', 0.12),
   bump: (t) => osc('p50', 140, t, 0.08, 0.14, { to: 90 }),
+  // Tennis-ball bounce (fetch): the membrane "bonk" of Restitution's balls, sliding down an F chord as it loses speed.
+  tennis: (t, { v = 1 }) => {
+    const f = freq(['F5', 'A5', 'C6', 'F6', 'A6'][Math.round(4 * Math.min(1, Math.max(0, v)))]), a = 0.06 + 0.22 * v;
+    osc('sine', f, t, 0.2, a, { release: 0.17 }); osc('sine', f * 1.594, t, 0.11, a * 0.3, { release: 0.09 }); osc('sine', f * 2.136, t, 0.08, a * 0.18, { release: 0.07 });
+  },
   blip: (t, o) => osc('p50', o.f || 600, t, 0.035, 0.05),
   select: (t) => arp(t, ['C6', 'G6'], 0.05, 'p25', 0.12),
   move: (t) => osc('p25', 880, t, 0.04, 0.07),
@@ -189,12 +194,13 @@ const SFX = {
 
 // ---------- music ----------
 // Tracks: "note:len" tokens (len in steps, default 1), "r" = rest, "C4+E4+G4" = chord. Tracks loop independently.
+// An optional third field is loudness: "C4:2:0.5" plays at half volume.
 function parse(str) {
   const ev = []; let step = 0;
   for (const tok of str.trim().split(/\s+/)) {
-    const [n, l] = tok.split(':');
+    const [n, l, v] = tok.split(':');
     const len = l ? +l : 1;
-    if (n !== 'r') ev.push({ step, len, f: n.split('+').map(freq) });
+    if (n !== 'r') ev.push({ step, len, f: n.split('+').map(freq), v: v ? +v : 1 });
     step += len;
   }
   return { ev, len: step };
@@ -220,6 +226,10 @@ const INST = {
   kalimba: { type: 'sine', vol: 0.66, pluck: 0.9, attack: 0.006, partials: [[1902, 0.13, 0.2], [3078, 0.055, 0.06]] }, // thumb piano: buzzy 3×, glassy 5.9× ping
   toypiano: { type: 'p25', vol: 0.4, pluck: 0.5, partials: [[12, 0.21, 1, 'p12'], [1200, 0.17, 0.5]] },
   honky: { type: 'p50', vol: 0.28, pluck: 0.7, partials: [[16, 0.25, 1, 'p50'], [-1200, 0.19, 0.8, 'triangle']] }, // two detuned voices beat against each other
+  // Struck membranes (Restitution): overtones at a drumhead's Bessel ratios (1.59×, 2.14×, 2.30×, 2.65×), so a ball
+  // or the trampoline bed rings with a membrane's inharmonic "bonk" instead of a string's clean octaves.
+  ball: { type: 'sine', vol: 0.95, pluck: 0.3, partials: [[807, 0.3, 0.6], [1316, 0.17, 0.4], [1440, 0.12, 0.35], [1689, 0.07, 0.3]], click: 0.05 },
+  bed: { type: 'sine', vol: 0.75, pluck: 0.5, attack: 0.004, partials: [[807, 0.32, 0.45], [1316, 0.18, 0.3], [1200, 0.14, 0.25, 'triangle']] },
 };
 function playNote(inst, fs, t, dur, extra = 1) {
   const I = INST[inst];
@@ -273,14 +283,14 @@ function voice(type, f, t, dur, vol, { attack = 0.008, release = 0.06, decay = 0
   src.connect(g); g.connect(musicBus); g.connect(echoSend);
   o.start(t); o.stop(end + (pluck ? 0.02 : release));
 }
-function drum(ch, t) {
-  if (ch === 'k') { osc('sine', 150, t, 0.12, 0.5, { to: 45, dest: musicBus }); }
-  else if (ch === 's') { noise(t, 0.12, 0.22, { type: 'highpass', f: 1200, dest: musicBus }); osc('triangle', 220, t, 0.05, 0.12, { to: 140, dest: musicBus }); }
-  else if (ch === 'h') noise(t, 0.035, 0.08, { type: 'highpass', f: 7000, dest: musicBus });
-  else if (ch === 'o') noise(t, 0.14, 0.07, { type: 'highpass', f: 6000, dest: musicBus });
-  else if (ch === 't') { osc('triangle', 210, t, 0.16, 0.36, { to: 95, dest: musicBus }); noise(t, 0.05, 0.06, { type: 'lowpass', f: 1200, dest: musicBus }); }
-  else if (ch === 'c') { drum('k', t); noise(t, 0.9, 0.11, { type: 'highpass', f: 4500, dest: musicBus }); }
-  else if (ch === 'w') { osc('sawtooth', 760, t, 0.08, 0.07, { to: 430, dest: musicBus }); osc('p50', 1050, t, 0.05, 0.035, { to: 600, dest: musicBus }); } // a tiny "woof"
+function drum(ch, t, g = 1) { // g: the song's drum level (drumVol)
+  if (ch === 'k') { osc('sine', 150, t, 0.12, 0.5 * g, { to: 45, dest: musicBus }); }
+  else if (ch === 's') { noise(t, 0.12, 0.22 * g, { type: 'highpass', f: 1200, dest: musicBus }); osc('triangle', 220, t, 0.05, 0.12 * g, { to: 140, dest: musicBus }); }
+  else if (ch === 'h') noise(t, 0.035, 0.08 * g, { type: 'highpass', f: 7000, dest: musicBus });
+  else if (ch === 'o') noise(t, 0.14, 0.07 * g, { type: 'highpass', f: 6000, dest: musicBus });
+  else if (ch === 't') { osc('triangle', 210, t, 0.16, 0.36 * g, { to: 95, dest: musicBus }); noise(t, 0.05, 0.06 * g, { type: 'lowpass', f: 1200, dest: musicBus }); }
+  else if (ch === 'c') { drum('k', t, g); noise(t, 0.9, 0.11 * g, { type: 'highpass', f: 4500, dest: musicBus }); }
+  else if (ch === 'w') { osc('sawtooth', 760, t, 0.08, 0.07 * g, { to: 430, dest: musicBus }); osc('p50', 1050, t, 0.05, 0.035 * g, { to: 600, dest: musicBus }); } // a tiny "woof"
 }
 
 let cur = null;
@@ -306,10 +316,10 @@ function schedule() {
     for (const tr of cur.tracks) {
       const e = tr.byStep.get(s.loop === false ? step : step % tr.len);
       if (!e) continue;
-      playNote(tr.inst, e.f, cur.next, e.len * cur.dt, tr.extra);
+      playNote(tr.inst, e.f, cur.next, e.len * cur.dt, tr.extra * e.v);
       audio.onNote?.(tr.inst, e.f, cur.next, e.len * cur.dt);
     }
-    if (s.drums) { const ch = s.drums[step % s.drums.length]; if (ch !== '.') { drum(ch, cur.next); audio.onNote?.('drum', ch, cur.next, cur.dt); } }
+    if (s.drums) { const ch = s.drums[step % s.drums.length]; if (ch !== '.') { drum(ch, cur.next, s.drumVol || 1); audio.onNote?.('drum', ch, cur.next, cur.dt); } }
     cur.step++; cur.next += cur.dt;
   }
 }
@@ -447,4 +457,150 @@ export const SONGS = {
     bpm: 150, loop: false, drums: 'sssssssk...k...',
     tracks: [['lead', 'G4 C5 E5 G5 C6:2 E6:2 G6:8 r:2'], ['lead2', 'E4 G4 C5 E5 G5:2 C6:2 E6:8 r:2'], ['bass', 'C3:2 C3:2 G2:2 G2:2 C3:8 r:2']],
   },
+  restitution: restitution(),
 };
+
+// "Restitution" — a bonus track by Claude, written in seconds instead of steps (a 10 ms grid) so physics sets the rhythm.
+// One idea all the way through: a bounce keeps only part of its speed (e, the coefficient of restitution), so a dropped
+// ball's rhythm speeds up and settles. A trampoline gives that energy back.
+// I.   Settling: balls dropped over F–Dm–Bb–C, each hit sliding down the chord as it loses height. The first ball's first
+//      flight is 0.8 s, and that becomes the tempo of everything after.
+// II.  Restitution: the first ball played backwards (tiny hops growing into full bounces), with the trampoline under it.
+// III. The theme rides the bounce. A kick on every landing, a snare trick at the top of every jump (which puts it on the
+//      backbeat), and hats clustered round the landings like springs. Each phrase pumps up and settles, and the balls keep
+//      falling underneath. The float bars bounce once a bar (twice the air time is four times the height), so they're
+//      half-time. The last big jump's melody is its own flight path, so the hang at the top comes out of the math; the
+//      drums go silent up there, then roll faster and faster as he falls, the way a falling thing covers ground.
+// IV.  The tune again, compacted to the top of each jump while the bed settles. Then one last jump, higher than any
+//      before, that never comes down.
+function restitution() {
+  const DT = 0.01, E8 = 0.2, BOUNCE = 0.8, BAR = 1.6;
+  const T = {}, D = [];
+  const put = (inst, t, n, d, v = 1) => (T[inst] ||= []).push({ t, n, d, v });
+  const line = (inst, str, t0, v = 1) => { // "note:eighths" tokens from t0
+    let t = t0;
+    for (const tok of str.trim().split(/\s+/)) { const [n, l] = tok.split(':'), d = (l ? +l : 1) * E8; if (n !== 'r') put(inst, t, n, d, v); t += d; }
+  };
+  const drop = (t0, ladder, e, fall, v = 1, hits = []) => { // first impact after `fall` s; each flight is e× the last
+    let t = t0 + fall, flight = 2 * fall * e, speed = 1;
+    while (flight > 0.02) {
+      const n = ladder[Math.round((ladder.length - 1) * speed)], vv = v * (0.2 + 0.8 * speed);
+      put('ball', t, n, flight, vv); hits.push({ t, n, v: vv, speed });
+      t += flight; flight *= e; speed *= e;
+    }
+    return t;
+  };
+
+  // I. Settling: a ping-pong ball, then a tennis ball, then a basketball join in.
+  const first = [];
+  let t = 0.3, end;
+  end = drop(t, ['F5', 'A5', 'C6', 'F6', 'A6', 'C7'], 0.8, BOUNCE / 2 / 0.8, 1, first); // first flight = one bounce
+  put('harm', t + 0.5, 'F3+C4', end - t, 0.35);
+  t = end + 0.4;
+  end = Math.max(drop(t, ['D4', 'F4', 'A4', 'D5', 'F5', 'A5'], 0.7, 0.45), drop(t + 0.6, ['D5', 'F5', 'A5', 'D6', 'F6', 'A6'], 0.8, 0.4, 0.8));
+  put('harm', t + 0.45, 'D3+A3', end - t - 0.45, 0.35);
+  t = end + 0.4;
+  end = Math.max(drop(t, ['Bb2', 'D3', 'F3', 'Bb3', 'D4'], 0.65, 0.6), drop(t + 0.3, ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'F5'], 0.7, 0.45, 0.85),
+    drop(t + 0.55, ['D5', 'F5', 'Bb5', 'D6', 'F6', 'Bb6'], 0.8, 0.38, 0.7));
+  put('harm', t + 0.6, 'Bb2+F3', end - t - 0.6, 0.35);
+  t = end + 0.35;
+  end = Math.max(drop(t, ['C3', 'E3', 'G3', 'C4', 'E4'], 0.65, 0.6), drop(t + 0.2, ['E4', 'G4', 'Bb4', 'C5', 'E5', 'G5'], 0.7, 0.45, 0.85),
+    drop(t + 0.4, ['G5', 'Bb5', 'C6', 'E6', 'G6', 'C7'], 0.8, 0.38, 0.7));
+  put('harm', t + 0.6, 'C3+G3+Bb3', end - t - 0.6, 0.35);
+
+  // II. Restitution: the first ball backwards. The bed joins once the hops are real jumps; its last hit is the downbeat.
+  const T2 = end + 0.8, last = first[first.length - 1].t;
+  const TL = Math.round((T2 + last - first[0].t) / DT) * DT;
+  for (const h of first) {
+    const tr = T2 + last - h.t;
+    put('ball', tr, h.n, 0.1, h.v);
+    if (h.speed > 0.3 && h !== first[0]) put('bed', tr, 'F2', 0.3, 0.25 + 0.6 * h.speed);
+  }
+
+  // III. The theme: [chord, melody in eighths, landings (eighths into the bar)]. The top of a jump is halfway between landings.
+  // The big jump (bars 14–15): each eighth's note is his height on the way up and down, launch to landing.
+  const PENT = ['C5', 'D5', 'F5', 'G5', 'A5', 'C6', 'D6', 'F6'];
+  const JUMP = Array.from({ length: 16 }, (_, k) => PENT[Math.round(7 * (1 - ((k - 8) / 8) ** 2))])
+    .reduce((a, n) => (a.length && a[a.length - 1][0] === n ? a[a.length - 1][1]++ : a.push([n, 1]), a), [])
+    .map(([n, l]) => `${n}:${l}`).join(' ');
+  const THEME = [
+    ['F', 'F4 A4 C5:2 C5 D5 F5:2', [0, 4]], ['Dm', 'D5 F5 A5:2 F5 A5 D6:2', [0, 4]], // pump…
+    ['Bb', 'D5 F5 Bb5:2 C5 F5 A5:2', [0, 4]], ['C', 'E5 G5:3 C5 E5:3', [0, 4]], //       …and settle
+    ['F', 'F4 A4 C5:2 C5 D5 F5:2', [0, 4]], ['Am', 'E5 A5 C6:2 A5 C6 E6:2', [0, 4]], // pump higher…
+    ['Bb', 'F5 Bb5 D6:2 D5 F5 Bb5:2', [0, 4]], ['C7', 'E5 G5 Bb5:2 C5 E5:3', [0, 4]], // …and settle
+    ['Dm', 'D5 A5 D6:4 C6 A5', [0]], ['Bb', 'D5 F5 Bb5:4 A5 F5', [0]], // float: one bounce a bar
+    ['F', 'C5 F5 A5:4 G5 F5', [0]], ['C', 'E5 G5 C6:4 Bb5 G5', [0]],
+    ['Gm', 'Bb4 D5 G5:2 D5 G5 Bb5:2', [0, 4]], ['C', JUMP, [0]], ['F', '', []], // wind up, launch, (in the air)
+  ];
+  const BASS = { F: ['F2', 'C3', 'F3'], Dm: ['D2', 'A2', 'D3'], Bb: ['Bb1', 'F2', 'Bb2'], C: ['C2', 'G2', 'C3'], Am: ['A1', 'E2', 'A2'], C7: ['C2', 'G2', 'Bb2'], Gm: ['G1', 'D2', 'G2'] };
+  const BALLS = { F: ['A3', 'C4', 'F4', 'A4', 'C5'], Dm: ['A3', 'D4', 'F4', 'A4', 'D5'], Bb: ['Bb3', 'D4', 'F4', 'Bb4', 'D5'], C: ['G3', 'C4', 'E4', 'G4', 'C5'],
+    Am: ['A3', 'C4', 'E4', 'A4', 'C5'], C7: ['G3', 'C4', 'E4', 'G4', 'Bb4'], Gm: ['G3', 'Bb3', 'D4', 'G4', 'Bb4'] }; // under the tune, where chords sit
+  const at = (x) => TL + x * E8, chordAt = (x) => THEME[Math.min(14, Math.floor(x / 8))][0];
+  const mel = [], lands = [];
+  THEME.forEach(([c, m, ls], i) => {
+    let x = i * 8;
+    if (m) for (const tok of m.split(' ')) { const [n, l] = tok.split(':'); mel.push([x, n]); x += l ? +l : 1; }
+    if (m) line('hero', m, at(i * 8));
+    for (const e of ls) lands.push(i * 8 + e);
+    if (i < 14) drop(at(i * 8), BALLS[c], 0.7, 0.27, 0.6); // the balls keep falling (not at the top of the big jump)
+  });
+  lands.push(120); // the big jump comes down on bar 16
+  line('harm', 'A4:8 E5:8 D5:8 E5:4 Bb4:4 F5:8 D5:8 C5:8 E5:8 D5:8 E5:8 A5:8', at(32), 0.9);
+  const sounding = (x) => mel.filter(([s]) => s <= x).pop()[1];
+  const tops = [];
+  for (let k = 0; k + 1 < lands.length; k++) {
+    const a = lands[k], b = lands[k + 1], top = (a + b) / 2, c = chordAt(a);
+    put('bed', at(a), BASS[c][0], (b - a) * E8, a % 8 ? 0.75 : 0.9);
+    put('sbass', at(a), BASS[c][0], (top - a) * E8); put('sbass', at(top), BASS[chordAt(top)][2], (b - top) * E8); // root down, octave up
+    tops.push({ n: sounding(top), c });
+  }
+  // Drums, in 16ths: kick on the landing, snare trick at the top, hats on the springs either side (a breath around the snare).
+  const hit = (x, ch) => D.push([TL + x * E8 / 2, ch]);
+  THEME.forEach((_, i) => {
+    const b = i * 16;
+    if (i < 8) for (const o of [0, 8]) { hit(b + o, 'k'); hit(b + o + 4, 's'); for (const h of [1, 2, 6, 7]) hit(b + o + h, 'h'); }
+    else if (i < 12) { hit(b, i === 8 ? 'c' : 'k'); hit(b + 8, 's'); for (const h of [2, 4, 6, 10, 12, 14]) hit(b + h, 'h'); } // half-time float
+    else if (i === 12) { hit(b, 'k'); hit(b + 4, 's'); hit(b + 1, 'h'); hit(b + 2, 'h'); for (let h = 8; h < 16; h++) hit(b + h, h === 8 ? 'k' : 's'); } // wind up
+    else if (i === 13) { hit(b, 'c'); hit(b + 1, 'h'); } // launch… then nothing at the top
+    if (i < 8 && i % 2) hit(b + 15, 'o'); // lift into the next phrase bar
+  });
+  for (const k of [12, 13, 14]) hit(7 * 16 + k, 't'); // tom fill into the float
+  for (let k = 1; k < 8; k++) D.push([at(112) + BAR * Math.sqrt(k / 8), 's']); // the fall: same drop between hits, so they crowd in
+  hit(240, 'c'); // the biggest landing
+
+  // IV. Compacted: just the top of each jump, in order, while the bed settles (each bounce 0.87× the last).
+  t = at(120);
+  let Q = BOUNCE;
+  for (const p of tops) {
+    put('bed', t, BASS[p.c][0], Q, 0.35 + 0.5 * Q / BOUNCE);
+    put('tine', t + Q / 2, p.n, Q, 0.55 + 0.45 * Q / BOUNCE);
+    t += Q; Q *= 0.87;
+  }
+  for (; Q > 0.02; Q *= 0.87) { put('bed', t, 'F2', Q, 0.35 + 0.5 * Q / BOUNCE); t += Q; }
+
+  // …and one last jump. Its top is 2 s up (the big jump's was 1.6), a step past the tune's highest note, and it never lands.
+  t += 1.2;
+  put('bed', t, 'F2', BOUNCE, 0.7); put('tine', t, 'F4+A4+C5', BOUNCE, 0.5); put('harm', t, 'F3+C4', 5, 0.35);
+  put('tine', t + 2, 'G6', 3, 1);
+  const steps = Math.round((t + 5.2) / DT);
+
+  // Seconds → tokens on the 10 ms grid (simultaneous notes merge into a chord).
+  const tracks = Object.entries(T).map(([inst, evs]) => {
+    evs.sort((a, b) => a.t - b.t);
+    const out = []; let step = 0;
+    for (let i = 0; i < evs.length; i++) {
+      const s = Math.round(evs[i].t / DT), notes = [evs[i].n];
+      if (s < step) continue;
+      while (i + 1 < evs.length && Math.round(evs[i + 1].t / DT) === s) notes.push(evs[++i].n);
+      if (s > step) out.push(`r:${s - step}`);
+      const next = i + 1 < evs.length ? Math.round(evs[i + 1].t / DT) : Infinity;
+      const len = Math.max(1, Math.min(Math.round(evs[i].d / DT), next - s));
+      out.push(`${notes.join('+')}:${len}:${evs[i].v.toFixed(2)}`);
+      step = s + len;
+    }
+    return [inst, out.join(' ')];
+  });
+  const drums = Array(steps).fill('.');
+  for (const [dt, ch] of D) drums[Math.round(dt / DT)] = ch;
+  return { bpm: 150, spb: 40, loop: false, echo: 0.2, drumVol: 1.5, drums: drums.join(''), tracks };
+}
