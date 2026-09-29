@@ -12,7 +12,7 @@ const el = {
   app: $('#app'), stage: $('#stage'), dialog: $('#dialog'), portrait: $('#portrait'), name: $('#dlg-name'),
   text: $('#dlg-text'), next: $('#dlg-next'), choices: $('#dlg-choices'), overlay: $('#overlay'), banner: $('#banner'),
   toast: $('#toast'), hudL: $('#hud-l'), hudC: $('#hud-c'), hudR: $('#hud-r'), pad: $('#pad'), a: $('#btn-a'),
-  b: $('#btn-b'), dpad: $('#dpad'), hint: $('#keyhint'),
+  b: $('#btn-b'), dpad: $('#dpad'), keys: $('#keys'), keysL: $('#keys .kl'), keysR: $('#keys .kr'),
 };
 
 export const SPEAKERS = {
@@ -37,7 +37,7 @@ export function layout() {
     sw = vw; sh = Math.round((vw * 9) / 16);
     top = Math.max(8, Math.min(60, vh * 0.06)); left = 0;
   } else {
-    const reserve = touch ? 0 : 36;
+    const reserve = touch ? 0 : 12;
     const s = Math.min(vw / 256, (vh - reserve) / 144);
     sw = Math.floor(256 * s); sh = Math.floor(144 * s);
     left = Math.floor((vw - sw) / 2); top = Math.floor((vh - reserve - sh) / 2);
@@ -49,12 +49,12 @@ export function layout() {
   // Phones in landscape: the stage fills the screen, so the dialog must sit on top of the game.
   el.app.classList.toggle('short', !portrait && vh <= 500);
   geo = { portrait, top, left, sw, sh, vh, u };
-  el.hint.style.top = top + sh + 6 + 'px';
   const tb = document.getElementById('topbtns'), inset = Math.max(4, Math.round(2 * u));
   tb.style.top = top + inset + 'px';
   tb.style.right = window.innerWidth - (left + sw) + inset + 'px';
   document.documentElement.style.setProperty('--stage-bottom', top + sh + 'px');
   placeDialog();
+  renderKeys(false);
 }
 let geo = null;
 // Where the dialog goes: under the stage in portrait; otherwise along the bottom of the stage,
@@ -87,8 +87,32 @@ export function setPad(mode = 'move', { a = 'JUMP', b = null, down = 'worm' } = 
   el.dpad.hidden = mode === 'action' || mode === 'none';
   el.dpad.querySelector('[data-dir=down]').hidden = mode !== 'trick';
   el.pad.hidden = mode === 'none';
-  const keys = { move: '← → move · SPACE ' + a.toLowerCase(), action: 'SPACE = ' + a.toLowerCase(), trick: '← → steer · SPACE ' + a.toLowerCase() + (b ? ' · X ' + b.toLowerCase() : '') + ' · ↓ ' + down, none: '' };
-  el.hint.textContent = keys[mode] || '';
+  keyState = { mode, a, b, down };
+  renderKeys();
+}
+
+// Laptop/controller reminders in the stage's bottom corners (where the phone pad would be):
+// soft by default, brighter for a moment whenever the controls change.
+let keyState = { mode: 'none', a: '', b: null, down: '' }, keysFade = 0;
+function renderKeys(fresh = true) {
+  const { mode, a, b, down } = keyState, gp = input.padConnected;
+  const cap = (k, cls = '') => `<kbd class="${cls}">${k}</kbd>`;
+  const pad = (w) => cap(btnName(w).replace('button ', ''));
+  let L = '', R = '';
+  if (mode === 'move' || mode === 'trick') {
+    L += `<div>${gp ? cap('✚') : cap('←') + cap('→')} ${mode === 'trick' ? 'steer' : 'move'}</div>`;
+    if (mode === 'trick') L += `<div>${gp ? cap('▼') : cap('↓')} ${down}</div>`;
+    if (!gp) L += `<div class="alt">(WASD works too)</div>`;
+  }
+  if (mode !== 'none') {
+    R += `<div>${a.toLowerCase()} ${gp ? pad('a') : cap('SPACE', 'wide')}</div>`;
+    if (b) R += `<div>${b.toLowerCase()} ${gp ? pad('b') : cap('X')}</div>`;
+  }
+  if (el.keysL.innerHTML === L && el.keysR.innerHTML === R) return;
+  el.keysL.innerHTML = L; el.keysR.innerHTML = R;
+  if (!fresh) return;
+  el.keys.classList.add('fresh');
+  clearTimeout(keysFade); keysFade = setTimeout(() => el.keys.classList.remove('fresh'), 2600);
 }
 
 // What to call the buttons on this device (the Logitech Precision prints numbers 1-4).
@@ -99,7 +123,7 @@ export function btnName(which = 'a') {
   return which === 'a' ? 'SPACE' : 'X';
 }
 // Relabel the A button without changing the pad mode (e.g. PLAY ♪ near the Toniebox).
-export function padLabel(a) { if (el.a.textContent !== a) el.a.textContent = a; }
+export function padLabel(a) { if (el.a.textContent !== a) { el.a.textContent = a; keyState.a = a; renderKeys(); } }
 
 // ---------------- HUD / banner / toast ----------------
 export function hud(l = '', c = '', r = '') {
@@ -231,16 +255,17 @@ function updateDialog(dt) {
 }
 
 // ---------------- modal overlay (clue cards, menus, results) ----------------
-let modal = null; // { buttons, sel, resolve, minAge, age, tapClose }
-export function overlay(html, { buttons = null, tapClose = false, minAge = 0.35, cls = '' } = {}) {
+let modal = null; // { buttons, sel, resolve, minAge, age, tapClose, keep }
+// `keep(v)` returning true handles a button in place and leaves the overlay open (e.g. picking songs).
+export function overlay(html, { buttons = null, tapClose = false, minAge = 0.35, cls = '', sel = 0, keep = null } = {}) {
   el.overlay.className = cls;
   el.overlay.innerHTML = html;
   el.overlay.hidden = false;
   const btns = [...el.overlay.querySelectorAll('button[data-v]')];
   return new Promise((resolve) => {
-    modal = { btns, sel: 0, resolve, minAge, age: 0, tapClose };
+    modal = { btns, sel: Math.min(sel, btns.length - 1), resolve, minAge, age: 0, tapClose, keep };
     btns.forEach((b, i) => {
-      b.addEventListener('click', (e) => { e.stopPropagation(); if (modal && modal.age > 0.15) closeModal(b.dataset.v); });
+      b.addEventListener('click', (e) => { e.stopPropagation(); if (modal && modal.age > 0.15) pickModal(b.dataset.v, i); });
       b.addEventListener('pointerenter', () => { if (modal) { modal.sel = i; markModal(); } });
     });
     if (tapClose) el.overlay.addEventListener('pointerdown', onOverlayTap);
@@ -249,6 +274,10 @@ export function overlay(html, { buttons = null, tapClose = false, minAge = 0.35,
 }
 function onOverlayTap(e) { if (!e.target.closest('button') && modal && modal.age > modal.minAge) closeModal(true); }
 function markModal() { modal?.btns.forEach((b, i) => b.classList.toggle('sel', i === modal.sel)); }
+function pickModal(v, i) {
+  if (modal.keep?.(v)) { modal.sel = i; markModal(); audio.sfx('select'); return; }
+  closeModal(v);
+}
 function closeModal(v) {
   const m = modal; modal = null;
   el.overlay.removeEventListener('pointerdown', onOverlayTap);
@@ -262,9 +291,9 @@ function updateModal(dt) {
   modal.age += dt;
   const n = modal.btns.length;
   if (n) {
-    if (input.leftPressed || input.upPressed) { modal.sel = (modal.sel + n - 1) % n; audio.sfx('move'); markModal(); }
-    if (input.rightPressed || input.downPressed) { modal.sel = (modal.sel + 1) % n; audio.sfx('move'); markModal(); }
-    if ((input.aPressed || input.startPressed) && modal.age > modal.minAge) closeModal(modal.btns[modal.sel].dataset.v);
+    const step = (input.leftPressed || input.upPressed) ? -1 : (input.rightPressed || input.downPressed) ? 1 : 0;
+    if (step) { modal.sel = (modal.sel + n + step) % n; audio.sfx('move'); markModal(); modal.btns[modal.sel].scrollIntoView?.({ block: 'nearest' }); }
+    if ((input.aPressed || input.startPressed) && modal.age > modal.minAge) pickModal(modal.btns[modal.sel].dataset.v, modal.sel);
   } else if (modal.tapClose && advancePressed() && modal.age > modal.minAge) closeModal(true);
 }
 

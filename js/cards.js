@@ -15,6 +15,7 @@ export const CARDS = [
   { id: 'baseball', name: 'HOME RUN', hp: 40, img: () => SPR.baseball, move: 'Moon Shot' },
   { id: 'diamond', name: 'DIAMOND', hp: 64, img: () => SPR.diamond, move: 'Shine' },
   { id: 'cupcake', name: 'CUPCAKE', hp: 8, img: () => SPR.cupcake, move: 'Sugar Rush' },
+  { id: 'splash', name: 'CANNONBALL', hp: 88, img: () => SPR.swim.tuck, move: 'Mega Splash', special: true }, // won at the Cannonball Contest
 ];
 
 export function binder() {
@@ -24,15 +25,31 @@ export function binder() {
 // The next card found: new ones first (in order), then random repeats.
 export function drawCard() {
   const b = binder();
-  const fresh = CARDS.find((c) => !b.includes(c.id));
-  const card = fresh || CARDS[(Math.random() * CARDS.length) | 0];
+  const fresh = CARDS.find((c) => !b.includes(c.id) && !c.special);
+  const pool = CARDS.filter((c) => !c.special);
+  const card = fresh || pool[(Math.random() * pool.length) | 0];
   let complete = false;
   if (fresh) {
     b.push(fresh.id);
-    if (b.length === CARDS.length && !save.data.tramp.hats.includes('collector')) { save.data.tramp.hats.push('collector'); complete = true; }
+    complete = checkComplete();
     save.flush();
   }
   return { card, isNew: !!fresh, complete };
+}
+// A full binder unlocks the Card Collector Cap.
+function checkComplete() {
+  const b = binder();
+  if (CARDS.every((c) => b.includes(c.id)) && !save.data.tramp.hats.includes('collector')) { save.data.tramp.hats.push('collector'); return true; }
+  return false;
+}
+// Give a specific card (the contest prize). Returns { card, isNew, complete }.
+export function giveCard(id) {
+  const b = binder(), card = CARDS.find((c) => c.id === id);
+  if (!card || b.includes(id)) return { card, isNew: false, complete: false };
+  b.push(id);
+  const complete = checkComplete();
+  save.flush();
+  return { card, isNew: true, complete };
 }
 
 const urlCache = {};

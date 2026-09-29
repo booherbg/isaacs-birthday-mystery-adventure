@@ -41,6 +41,13 @@ ol.prompts pre { white-space:pre-wrap; word-wrap:break-word; margin:4px 0 0; fon
 .pnote { font-size:13px; color:var(--muted); font-style:italic; margin-top:6px; }
 .ideas li { margin: 6px 0; }
 .foot { margin-top:50px; color:var(--muted); font-size:14px; text-align:center; }
+.tabs { display:flex; flex-wrap:wrap; gap:8px; position:sticky; top:0; z-index:5; padding:10px 0; margin:18px 0 0; background:var(--bg); }
+.tab { font-family:'Press Start 2P', monospace; font-size:11px; line-height:1.4; color:var(--muted); text-decoration:none; background:var(--panel); border:2px solid var(--line); border-radius:10px; padding:10px 12px; }
+.tab[aria-selected="true"] { color:#2a1f33; background:var(--sun); border-color:#0c0718; }
+.tab:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+[hidden] { display:none !important; }
+iframe.board { width:100%; height:1200px; border:2px solid var(--line); border-radius:12px; background:#1c1238; display:block; margin:10px 0 6px; }
+.card figure { margin:10px 0 4px; }
 .btn { display:inline-block; background:var(--sun); color:#2a1f33; font-weight:700; padding:10px 16px; border-radius:12px; text-decoration:none; border:3px solid #0c0718; box-shadow:0 4px 0 #0c0718; }
 </style></head>
 <body><main>
@@ -49,15 +56,18 @@ ol.prompts pre { white-space:pre-wrap; word-wrap:break-word; margin:4px 0 0; fon
 <p class="lede">A post-mortem: one dad, one AI pair-programmer (Claude, in Claude Code), one afternoon. It's a pixel-art mystery that reveals an 8-year-old's birthday present, and then becomes the present's own mini-game.</p>
 <div class="warn">⚠️ Spoiler: this page reveals the surprise. (If you're Isaac: go play first!)</div>
 
+<nav class="tabs" aria-label="Report sections"><a class="tab" href="#day1" data-tab="day1" aria-selected="true">Day 1 · The birthday build</a><a class="tab" href="#day2" data-tab="day2" aria-selected="false">Day 2 · Feedback round</a></nav>
+
+<section id="day1" class="day">
 <div class="stats">
   <div><b>~2.5h</b><span>first prompt → birthday reveal</span></div>
-  <div><b>4741</b><span>lines of JS</span></div>
+  <div><b>5569</b><span>lines of JS</span></div>
   <div><b>0</b><span>image or audio files: every pixel and note is code</span></div>
   <div><b>0</b><span>dependencies / build steps</span></div>
-  <div><b>39</b><span>hand-authored pixel sprites</span></div>
-  <div><b>15</b><span>songs &amp; jingles, 43 sound effects</span></div>
+  <div><b>43</b><span>hand-authored pixel sprites</span></div>
+  <div><b>15</b><span>songs &amp; jingles, 45 sound effects</span></div>
   <div><b>60</b><span>prompts from Dad (all below)</span></div>
-  <div><b>12</b><span>deploys to GitHub Pages</span></div>
+  <div><b>18</b><span>deploys to GitHub Pages</span></div>
 </div>
 
 <h2>What it is</h2>
@@ -193,6 +203,101 @@ back RIGHT shoulder          → button 7  game read B ✓</pre><div class="pnot
 
 <h2>What's next</h2>
 <div class="card"><ul class="ideas"><li><b>Chapter 2: Moving Day</b> Load the truck Tetris-style, keep Sunny and Freida from escaping, first night in the new house.</li><li><b>Seasons at the new house</b> Halloween trick-or-treating, first snow in the new backyard, sledding off the dike, snowball fight with Dad.</li><li><b>Red River Field Guide</b> A fishing log of real North Dakota species (channel cat, goldeye, mooneye, walleye, sauger, pike, drum), with catch-and-release photos.</li><li><b>Mom&#x27;s Bird Log</b> Spot-and-identify birds along the trail (pelicans, great blue heron, bald eagle, Baltimore oriole) with synthesized calls.</li><li><b>Play as Sunny or Freida</b> Sunny&#x27;s bone hunt, or Freida&#x27;s stealth mission to sit on every important object.</li><li><b>Trampoline Time 2P</b> Dad vs. Isaac on keyboard and controller, pass-and-play, or a ghost of your best run.</li><li><b>Sky Zone arena</b> Dodgeball, foam pit and a ninja course as new trampoline stages; a trick book and daily challenges.</li><li><b>Card Binder 2.0</b> A tiny turn-based card game that uses the family cards he&#x27;s collected.</li><li><b>Level editor</b> Isaac places ramps, cards and NPCs, then shares a level code with friends.</li><li><b>Photo-to-pixel</b> Turn real photos (the actual trampoline once it&#x27;s up, his new room) into backgrounds and sprites.</li><li><b>Family voice lines</b> Record Mom, Dad and Isaac in the browser for key dialog.</li><li><b>Installable + offline</b> PWA with a service worker, so it lives on the home screen and works in the car.</li><li><b>A birthday-reveal kit</b> Turn this into a config-driven template others can fork: names, photos, places, clues and the reveal item.</li></ul></div>
+</section>
+
+<section id="day2" class="day">
+<p class="lede">The morning after the reveal, the family kept playing, and friends started trying it too. Blaine sent a round of notes. This tab covers that second session: what changed, how the new pieces were designed, and the prompts, verbatim.</p>
+<div class="stats">
+  <div><b>17</b><span>more prompts (all below)</span></div>
+  <div><b>1</b><span>new mini-game: the Cannonball Contest</span></div>
+  <div><b>4</b><span>songs rebuilt with more depth</span></div>
+  <div><b>2</b><span>design-board rounds for one backpack</span></div>
+  <div><b>5569</b><span>lines of JS now</span></div>
+  <div><b>0</b><span>deploys until Dad tested locally</span></div>
+</div>
+
+<h2>What changed</h2>
+<div class="card">
+<ul>
+<li><b>A new pool activity.</b> "Running to the right" at Island Park Pool felt empty, so there's now a <b>Cannonball Contest</b> on the springboard, judged by Mom, Dad and the lifeguard.</li>
+<li><b>Music with more depth.</b> The main theme, the battle theme, Trampoline Time and the pool song were rebuilt with Commodore 64 and Final Fantasy techniques (below).</li>
+<li><b>A Soundtrack Explorer.</b> Every song, where it plays, what inspired it, and a live piano roll. It unlocks after the mystery is solved, because the track list gives the ending away.</li>
+<li><b>Big Bunny is obviously Big Bunny.</b> Designed on a live board first (embedded below), then built.</li>
+<li><b>"Go around back" is obvious.</b> Players kept trying the front door. Now Sunny scouts ahead to the side gate and barks, balloons bob on the gate, a sign on the fence says BACKYARD, and an arcade-style GO → blinks if you stall.</li>
+<li><b>Phones held sideways:</b> the speech bubble moves up into the sky in the walking levels, so it stops covering everyone.</li>
+<li><b>Laptops:</b> soft key reminders in the bottom corners, where the phone's touch pad would be (and yes, WASD works too).</li>
+<li><b>The first bounce is 30 seconds</b>, with a shorter POW meter that fills faster and still reaches outer space.</li>
+<li><b>Small things:</b> a matching swim shirt, "Island Park Pool" without the street name (that's not its name), a sharper V in the pixel font.</li>
+</ul>
+</div>
+
+<h2>Screenshots</h2>
+<div class="gallery"><figure><img src="report/r2-01-contest.png" alt="The Cannonball Contest: Mom, Dad and the lifeguard hold up their paddles" loading="lazy"><figcaption>The Cannonball Contest: Mom, Dad and the lifeguard hold up their paddles</figcaption></figure><figure><img src="report/r2-02-contest-air.png" alt="Double-flip cannonball, in a swim shirt that matches his trunks" loading="lazy"><figcaption>Double-flip cannonball, in a swim shirt that matches his trunks</figcaption></figure><figure><img src="report/r2-03-pool.png" alt="Dad and Mom wait at the springboard; the lifeguard is up on his chair" loading="lazy"><figcaption>Dad and Mom wait at the springboard; the lifeguard is up on his chair</figcaption></figure><figure><img src="report/r2-04-around-back.png" alt="The new house: Sunny scouts ahead, balloons on the gate, a BACKYARD sign" loading="lazy"><figcaption>The new house: Sunny scouts ahead, balloons on the gate, a BACKYARD sign</figcaption></figure><figure><img src="report/r2-05-phone-dialog.png" alt="Phones held sideways: the speech bubble docks up top, so the characters stay visible" loading="lazy"><figcaption>Phones held sideways: the speech bubble docks up top, so the characters stay visible</figcaption></figure><figure><img src="report/r2-06-bunny.png" alt="Big Bunny peeking out of the backpack (walking, scooter, bike)" loading="lazy"><figcaption>Big Bunny peeking out of the backpack (walking, scooter, bike)</figcaption></figure><figure><img src="report/r2-07-soundtest.png" alt="The Soundtrack Explorer, with a live piano roll of every voice" loading="lazy"><figcaption>The Soundtrack Explorer, with a live piano roll of every voice</figcaption></figure><figure><img src="report/r2-08-keys.png" alt="Soft key reminders in the corners on laptops" loading="lazy"><figcaption>Soft key reminders in the corners on laptops</figcaption></figure><figure><img src="report/r2-09-title.png" alt="The title once the mystery is solved: Cannonball Contest and the Soundtrack Explorer" loading="lazy"><figcaption>The title once the mystery is solved: Cannonball Contest and the Soundtrack Explorer</figcaption></figure></div>
+
+<h2>Designing the Cannonball Contest</h2>
+<div class="card">
+<p>Blaine asked to brainstorm. Instead of a wall of text, the AI put four options in a one-click picker, each with a little ASCII mockup: a <b>Cannonball Contest</b> on the diving board, a <b>Big Blue Slide</b> time trial, a <b>Lazy River</b> float, and a <b>dark tube slide</b>. He picked the recommended one in seconds.</p>
+<p>Why that one: it adds a new verb (timing plus tricks plus splash) instead of more running. The springboard hints at BOUNCY right before the reveal, and judges holding up paddles echo Mom judging the skate park.</p>
+<ul>
+<li><b>Bounce:</b> tap as you land on the board, three times. A ring closes to show when. Each bounce is PERFECT, GOOD or BOING, and adds up to launch power.</li>
+<li><b>In the air:</b> FLIP (tap again to queue a double or triple), ▼ to tuck into a CANNONBALL, WORM for a belly flop (SMACK!), and ◀ ▶ to steer. Steer toward the judges and the splash soaks them.</li>
+<li><b>Scoring:</b> splash size comes from power, flips and entry type. Each judge has a personality: Mom rewards flips, Dad rewards getting soaked, and the lifeguard is strict but loves a clean entry. A belly flop gets Dad's 10, Mom's 4, and the lifeguard's "OUCH". Freida hisses; Sunny barks happily.</li>
+<li><b>No way to lose.</b> Three dives, a rank that's always a compliment, a CANNONBALL card for the binder, and Swim Goggles for a perfect 30.</li>
+</ul>
+<p>A bot played it by reading the game's state and timing its presses. That's how we learned a Puppeteer keypress is shorter than a frame.</p>
+</div>
+
+<h2>Music with more depth</h2>
+<div class="card">
+<p>"A little more Commodore / Final Fantasy" turned into a few specific techniques, all still synthesized in the browser:</p>
+<ul>
+<li><b>C64 chord arpeggios.</b> One voice flicks through a chord's notes 36 times a second. Your ear hears a shimmering chord from one channel, the classic Commodore 64 trick.</li>
+<li><b>A filter bass.</b> A triangle bass plus a pulse wave through a resonant low-pass filter that sweeps down on every note: the "wow" of SID basslines.</li>
+<li><b>A livelier lead.</b> Vibrato that fades in after the note starts, doubled by a thinner pulse wave detuned a few cents, so it has width and movement.</li>
+<li><b>Music boxes with character.</b> The birthday card and Toniebox songs had been plain sine waves, flat and 8 dB quieter than everything else. Each now has one or two voices with rich overtones: a music-box tine (its overtones aren't whole multiples of the note, which is where the sparkle comes from, plus a tiny pin click), a kalimba lullaby, a toy-piano march with little barks on the beat, and a honky-tonk piano made of two voices slightly out of tune with each other.</li>
+<li><b>Bridges.</b> Each song got a second half. The main theme drops to half-time drums with a Final Fantasy-style harp arpeggio and a countermelody. That's the "tempo change" Blaine heard: same speed, but the beat feels half as fast. The battle theme gets a driving 3-3-2 bridge with a tom fill, and the pool song turns into a steel-drum calypso.</li>
+</ul>
+<p><b>Measuring what the AI can't hear.</b> The AI can't listen, so it rendered every song offline (an OfflineAudioContext with a fake clock), saved WAVs, and checked them with <code>sox</code>. Loudness had to match the old versions within 0.2 dB, both halves of each song had to balance, and spectrograms showed the new texture:</p>
+<figure><img src="report/r2-10-spectrogram.png" alt="Spectrograms of the main theme before and after"><figcaption>The main theme, before (top) and after (bottom). The second half is the new bridge.</figcaption></figure>
+</div>
+
+<h2>Big Bunny, designed on a board</h2>
+<div class="card">
+<p>Big Bunny rides in Isaac's backpack, but his two thin ears read like an antenna. Blaine asked for a web board to iterate on before anything changed in the game. The AI built a live page that draws Isaac with the real game sprites at real size. Each option walks, stops, turns around and jumps, with a close-up.</p>
+<p>Round 1 had four ideas (A to D). Blaine: <i>"i like B+D but slightly slimmer - new version has bunny dominating the character."</i> Round 2 added two slimmer takes, E and F. E went into the game: a small face, floppy ears that stream back when running, and a duck-and-pop when Isaac turns around.</p>
+<iframe class="board" src="report/bunny-board.html" title="Big Bunny Backpack design board" loading="lazy"></iframe>
+<p><a href="report/bunny-board.html">Open the board on its own page</a></p>
+</div>
+
+<h2>Bugs we caught (day 2)</h2>
+<div class="card"><table><tr><td><b>The test bot couldn&#x27;t bounce</b></td><td>Puppeteer&#x27;s key press starts and ends inside a single frame, so the once-per-frame input poll never saw it. Every dive came out at power 0.</td><td>Taught the bot to hold keys for 45ms, like a real finger. Real players were never affected.</td></tr><tr><td><b>Big launches cropped Isaac&#x27;s head</b></td><td>The camera eased toward him, so at full power it trailed a rocketing kid.</td><td>The camera now leads by his upward speed (and counts the party hat).</td></tr><tr><td><b>Isaac surfaced in front of Dad&#x27;s paddle</b></td><td>He came up right where he landed, which was often in front of the judges.</td><td>He paddles to mid-pool while the scores go up.</td></tr><tr><td><b>Big Bunny&#x27;s face was hiding</b></td><td>The face sat behind the pack&#x27;s rim, and two ears 2px apart merged their outlines into a black block.</td><td>Raised the face to sit on the rim and spaced the ears. Found by screenshotting every ride mode.</td></tr><tr><td><b>The design board&#x27;s bunnies never blinked</b></td><td>The blink frames still had the eye pixels in them.</td><td>Blink frames drop the eyes.</td></tr><tr><td><b>The title menu overflowed on phones</b></td><td>A fourth button pushed Birthday card and About off a sideways phone.</td><td>On short screens, TRAMPOLINE TIME spans the top and the rest share a row.</td></tr><tr><td><b>SCORE hid under the top buttons</b></td><td>The HUD&#x27;s right margin was sized for the small desktop buttons, not the 40px touch ones.</td><td>A touch-sized margin.</td></tr><tr><td><b>The About link fell off the stage</b></td><td>Moving the key hints into the corners let the stage grow into the space the title footer used.</td><td>The title footer now sits inside the stage. Found by Blaine on a laptop.</td></tr><tr><td><b>The Soundtrack Explorer bounced on every pick</b></td><td>Picking a song closed and re-opened the whole panel, which replayed its pop-in animation.</td><td>Songs now switch in place; only Back closes the panel. Found by Blaine.</td></tr><tr><td><b>A regression run silently stalled</b></td><td>Headless Chrome hung while closing, so the second story path never started.</td><td>Every bot run now has a timeout.</td></tr><tr><td><b>Recording the music hung</b></td><td>Headless Chrome had no audio device to record from.</td><td>Render songs offline instead (an OfflineAudioContext driven by a fake clock), then measure with sox.</td></tr></table></div>
+
+<h2>More things we'd tell someone doing this</h2>
+<div class="card">
+<ul>
+<li><b>Put a picker in front of a brainstorm.</b> Four options with tiny mockups got a decision in one click.</li>
+<li><b>Iterate on tiny sprites outside the game.</b> A live board with the real sprites made "slightly slimmer" a five-minute change instead of a guessing game.</li>
+<li><b>Measure what you can't perceive.</b> Loudness numbers and spectrograms stood in for ears.</li>
+<li><b>Hold deploys while people are playing.</b> Friends were on the live site all day, so every change waited for a local test first.</li>
+</ul>
+</div>
+
+<h2>The prompts, verbatim (day 2)</h2>
+<p class="lede">Continuing the numbering from day 1. The first five arrived late on day 1, after the report went up. Street names are redacted as before.</p>
+<ol class="prompts"><li><div class="pmeta"><span>#61</span><time>Sep 28 · 22:40</time></div><pre>also make sure the character previews make sense - this one is tough to tell what she&#x27;s doin g(smiling?) for example. i know you&#x27;e updated but point remains [Image #22]</pre><div class="pnote">Screenshot: Mom&#x27;s dialog portrait. (Late on day 1, after the report went up.)</div></li><li><div class="pmeta"><span>#62</span><time>Sep 28 · 22:47</time></div><pre>could we get a version (git hash + timestamp ok) soewhere out of the way and inconspicuous on home screen</pre></li><li><div class="pmeta"><span>#63</span><time>Sep 28 · 22:48</time></div><pre>char looks good, bottom left is a little &#x27;creepy&#x27;? close but kind of off. one more pass i think?</pre></li><li><div class="pmeta"><span>#64</span><time>Sep 28 · 22:48</time></div><pre>[Image #23]</pre><div class="pnote">Screenshot: Mom&#x27;s dialog portrait again.</div></li><li><div class="pmeta"><span>#65</span><time>Sep 28 · 22:51</time></div><pre>[Image #24] maybe binos around neck? one more pass. dad&#x27;s close-up smile is also a bit off. one round of cleanup pls.</pre><div class="pnote">Screenshot: Mom by the river with binoculars that read like a mask.</div></li><li><div class="pmeta"><span>#66</span><time>Sep 29 · 10:09</time></div><pre>hi! ok so after playing a few times, a round of feedback: lets add some &#x27;depth&#x27; and texture to the default audio track. a little more commodore / final fantasy style. its good but can be a bit more textured. also on mobile the opening speech bubble hides the characters - soft touch for how to address that? also something on the final screen to show we should be &#x27;going around back&#x27; - players try to go in the front door or through the gap between house/fence - it isnt obvious to keep going to the right. maybe just a little animation or something to drive their attention to the right so that it&#x27;ll start scrolling? or maybe sunny kind of moves that way and the player will naturally want to follow? all in all this has been amazing. lets also call island park pool just island park pool - no need for &#x27;[street]&#x27; as thats not actually the name (derp). i think another activity at the pool would be fun - lets brainstorm a mini game - running to the right as th emain activity leaves a bit to be desired (feels slightly empty). there&#x27;s the big blue slide, a tube slide, and lazy river / diving boards as possible interactions</pre></li><li><div class="pmeta"><span>#67</span><time>Sep 29 · 10:42</time></div><pre>Cannonball Contest (Recommended)</pre><div class="pnote">Picked from a four-option picker with ASCII mockups: Cannonball Contest, Big Blue Slide time trial, Lazy River float, Dark tube slide.</div></li><li><div class="pmeta"><span>#68</span><time>Sep 29 · 11:16</time></div><pre>great - hold deployment until i test locally pls so i can test (other folks are checking it out today)</pre></li><li><div class="pmeta"><span>#69</span><time>Sep 29 · 11:43</time></div><pre>haha love it. ok for the swim lets give him a little swim shirt that matches the shorts. also love the hints - i think for laptop mode having reminders (gently, softly) in the corners of controls are nice. example is &#x27;down&#x27; the arrow down or is it wasd down? lets also give the battle music a little update with depth. i love the beats and chiptune percussion its fun haha. what&#x27;s the influence for these tracks? im listening to it now with more attention and it&#x27;s pretty rad - there&#x27;s a tempo change too. maybe a couple more of these built out with a soundtrack explorer would be a fun addition.</pre></li><li><div class="pmeta"><span>#70</span><time>Sep 29 · 11:47</time></div><pre>also - i love that big bunny is in the backpack but its not obvious. almost looks like an antenna. maybe something a bit more obvious? animation when we turn back/forth maybe? thoughts? also lets trim to 30sec for the final sceneon the trampoline - with the meter&#x27;s max being a bitlower so it fills easier. the &#x27;tramp mode&#x27; on menu can stay 60 sec though. happy to see a web board with big bunny backpack updates if needed for us to iterate on before implementation.</pre></li><li><div class="pmeta"><span>#71</span><time>Sep 29 · 11:55</time></div><pre>i like B+D but slightly slimmer - new version has bunny dominating the character[Image #25]</pre><div class="pnote">Screenshot: option D on the design board, with Big Bunny as big as Isaac&#x27;s head.</div></li><li><div class="pmeta"><span>#72</span><time>Sep 29 · 11:56</time></div><pre>lets also keep this board locally and include in a new tab after this session of the engineering report - its very useful and pretty neat!</pre></li><li><div class="pmeta"><span>#73</span><time>Sep 29 · 12:04</time></div><pre>little bit of clipping in the &#x27;about&#x27; for laptop size [Image #26] also noticing context is over 50% - i can compact in a bit</pre><div class="pnote">Screenshot: the title screen&#x27;s About link hanging off the bottom of the game on a laptop.</div></li><li><div class="pmeta"><span>#74</span><time>Sep 29 · 12:20</time></div><pre>holy crap the sound test is amazing. this is more than a &#x27;sound test&#x27; - that makes it seem like its some kind of hardware test. update that link and otherwise we&#x27;re good. maybe more like &#x27;soundtrack explorer&#x27;</pre></li><li><div class="pmeta"><span>#75</span><time>Sep 29 · 12:20</time></div><pre>oof dont love the &#x27;bounce&#x27; effect on the sound explorer when selecting new songs</pre></li><li><div class="pmeta"><span>#76</span><time>Sep 29 · 12:23</time></div><pre>sounds 11-14 could use an update - they&#x27;re flat now that i have the chance to listen through them. is that intentional? maybe they can get their own identity - less high fidelity (less instrumentation) but just as rich with depth of texture/harmonics</pre></li><li><div class="pmeta"><span>#77</span><time>Sep 29 · 12:26</time></div><pre>also - after compaction i have a surprise for you. let me know when we can wrap, compact, and have a coffee together</pre></li></ol>
+</section>
+<script>
+// Tabs: plain sections that all show without JS; with JS, one at a time (#day2 deep-links).
+const tabs = [...document.querySelectorAll('.tab')], days = [...document.querySelectorAll('.day')];
+function show(id) { days.forEach((d) => (d.hidden = d.id !== id)); tabs.forEach((t) => t.setAttribute('aria-selected', t.dataset.tab === id)); }
+tabs.forEach((t) => t.addEventListener('click', (e) => { e.preventDefault(); show(t.dataset.tab); history.replaceState(null, '', '#' + t.dataset.tab); document.querySelector('.tabs').scrollIntoView(); }));
+show(location.hash === '#day2' ? 'day2' : 'day1');
+// The embedded design board grows to its full height (same origin), so there's no scrollbox inside the page.
+const board = document.querySelector('iframe.board');
+board?.addEventListener('load', () => {
+  try { const doc = board.contentDocument, fit = () => (board.style.height = doc.documentElement.scrollHeight + 'px'); fit(); new ResizeObserver(fit).observe(doc.body); } catch (e) {}
+});
+</script>
 
 <p class="foot">Made with love in Fargo, ND · Code: <a href="https://github.com/booherbg/isaacs-birthday-mystery-adventure">github.com/booherbg/isaacs-birthday-mystery-adventure</a> · Built with Claude (Claude Code)<br>Happy 8th birthday, Isaac. 🎂</p>
 </main></body></html>

@@ -411,7 +411,7 @@ export class World {
       let img = S.idle;
       if (!p.onGround) img = S.jump;
       else if (moving) img = [S.walkA, S.idle, S.walkB, S.idle][Math.floor(p.anim / 1.6) % 4];
-      if (this.pack !== false) drawPack(x, y, f, p.anim);
+      if (this.pack !== false) drawPack(x, y, f, p.anim, p);
       spr(img, x - 8, y - 24, f);
       return;
     }
@@ -433,7 +433,7 @@ export class World {
     else if (this.mode === 'skate') drawBoard(0, p.grabT > 0.12 ? -6 : 0, flipping ? p.flipT / (p.flipDur || 0.42) : 0, f, p.flipKind);
     else drawBike(0, 0, f, p.anim);
     const seatY = this.mode === 'bike' ? -11 : -lift; // Isaac's "feet line" relative to the ground
-    if (this.pack !== false) drawPack(0, seatY, f, p.anim);
+    if (this.pack !== false) drawPack(0, seatY, f, p.anim, p);
     let img = S.ride;
     if (this.mode === 'scooter' && p.onGround && Math.abs(p.vx) > 5 && Math.floor(p.anim / 3) % 3 === 0) img = S.kick;
     if (this.mode === 'bike') img = Math.floor(p.anim / 2) % 2 ? S.bike : S.bikeB;
@@ -534,14 +534,37 @@ export function drawWorm(x, y, t, flip = false) {
   }
 }
 
-// Green backpack with Big Bunny's ears poking out (drawn behind Isaac).
-export function drawPack(x, y, flip, anim = 0) {
-  const s = flip ? -1 : 1, bx = x - 7 * s - (flip ? 3 : 0);
-  const wob = Math.round(Math.sin(anim * 0.8)) ;
-  rect(bx - 1, y - 18, 5, 9, '#2a1f33'); rect(bx, y - 17, 3, 7, '#3f9b3a'); rect(bx, y - 13, 3, 1, '#2c7a34');
-  const ex = flip ? bx + 2 : bx;
-  rect(ex - 1, y - 24 + wob, 3, 7, '#2a1f33'); rect(ex, y - 23 + wob, 1, 6, '#f4efe6');
-  rect(ex + 2, y - 23, 3, 6, '#2a1f33'); rect(ex + 3, y - 22, 1, 5, '#f4efe6');
+// Green backpack with Big Bunny peeking out (drawn behind Isaac).
+// Design E from the bunny board (report/bunny-board.html): he ducks + pops back up when Isaac
+  // turns around, blinks, bobs with steps, and his ears flop with running, stopping and jumping.
+// `st` is the player (per-rider state lives on it); physics steps at the game's 60fps like drawWorm.
+export function drawPack(x, y, flip, anim = 0, st = {}) {
+  const dt = 1 / 60, face = flip ? -1 : 1;
+  if (st.packFace !== undefined && st.packFace !== face) { st.packTurn = 0.42; st.earV = (st.earV || 0) + 9; }
+  st.packFace = face;
+  st.packTurn = Math.max(0, (st.packTurn || 0) - dt);
+  const speed = Math.abs(st.vx || 0), air = st.onGround === false;
+  const target = 0.25 + Math.min(1, speed / 90) * 0.7 + (air ? (st.vy < 0 ? 0.8 : -0.3) : 0);
+  st.ear ??= 0.4; st.earV ??= 0;
+  st.earV += ((target - st.ear) * 90 - st.earV * 7) * dt; st.ear += st.earV * dt;
+  if (speed < 5 && st.packMoving) st.earV -= 7; // stopping: ears swing forward
+  st.packMoving = speed >= 5;
+  let dy = st.packMoving && !air ? Math.round(Math.abs(Math.sin(anim * 0.8))) : 0;
+  if (st.packTurn > 0) { const k = 1 - st.packTurn / 0.42; dy = -Math.round((k < 0.45 ? Math.sin((k / 0.45) * Math.PI / 2) : Math.cos(((k - 0.45) / 0.55) * Math.PI / 2)) * 5); }
+  const B = SPR.bunnyPack, top = -18, px = -12, hx = px - 1, hy = top - B.face.height + 2 - dy;
+  G.save(); G.translate(Math.round(x), Math.round(y)); G.scale(face, 1);
+  G.drawImage(B.pack, px, top);
+  G.save(); G.beginPath(); G.rect(-24, -44, 24, 44 + top + 1); G.clip(); // tucked below the rim while ducking
+  for (const [ex, tilt] of [[hx + 1, -0.05], [hx + 5, 0.12]]) bunnyEar(ex, hy + 1, st.ear + tilt);
+  G.drawImage((game.t % 3.1) < 0.13 ? B.blink : B.face, hx, hy);
+  G.restore();
+  G.drawImage(B.pack, px, top);
+  G.restore();
+}
+function bunnyEar(x, y, ang, L = 5) {
+  const sx = Math.sin(ang), sy = -Math.cos(ang);
+  for (let i = 0; i <= L; i++) rect(x + sx * i - 1, y + sy * i - 1, 3, 3, '#2a1f33');
+  for (let i = 0; i <= L; i++) rect(x + sx * i, y + sy * i, 1, 1, i && i < L && i % 2 ? '#ff9eaa' : '#ffffff');
 }
 
 // Mom's movie-star twinkle: a little sparkle pops near her hair every couple of seconds.

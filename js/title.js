@@ -9,6 +9,8 @@ import { CONFIG } from './config.js';
 import { save } from './save.js';
 import { goStage, STAGES, STAGE_NAMES } from './levels.js';
 import { trampolineScene, hatPicker, drawHat, HATS } from './tramp.js';
+import { diveScene } from './dive.js';
+import { soundtrackExplorer } from './jukebox.js';
 
 export function titleScene() {
   const S = {
@@ -23,7 +25,7 @@ export function titleScene() {
       const d = save.data;
       const started = d.stage > 0 && !d.done;
       const btns = d.done
-        ? [{ v: 'tramp', label: '★ TRAMPOLINE TIME ★', cls: 'go' }, { v: 'story', label: '▶ Play the story again<span class="note">Try the other path!</span>' }, { v: 'card', label: '🎂 Birthday card' }]
+        ? [{ v: 'tramp', label: '★ TRAMPOLINE TIME ★', cls: 'go' }, { v: 'dive', label: `🌊 Cannonball Contest${d.dive?.best ? `<span class="note">Best: ${d.dive.best}</span>` : ''}` }, { v: 'story', label: '▶ Play the story again<span class="note">Try the other path!</span>' }, { v: 'card', label: '🎂 Birthday card' }]
         : started
           ? [{ v: 'continue', label: `▶ CONTINUE<span class="note">${STAGE_NAMES[STAGES[d.stage]] || ''}</span>`, cls: 'go' }, { v: 'new', label: '↺ Start over' }]
           : [{ v: 'new', label: '▶ START THE ADVENTURE', cls: 'go' }];
@@ -33,9 +35,9 @@ export function titleScene() {
         <div class="title-wrap"><div class="logo">ISAAC'S<br class="pb"> <span>BIRTHDAY</span><br>MYSTERY<br class="pb"> ADVENTURE</div>
         <div class="tag">${d.done ? '★ MYSTERY SOLVED ★' : 'A MYSTERY IN 3 CLUES'}</div></div>
         <div class="title-btns">${btns.map((b) => `<button class="big ${b.cls || ''}" data-v="${b.v}">${b.label}</button>`).join('')}</div>
-        <div class="title-foot">${foot}<br><button class="linkbtn" data-v="about">ⓘ About this game</button></div>`, { cls: 'clear' });
+        <div class="title-foot">${foot}<br><button class="linkbtn" data-v="about">ⓘ About this game</button>${d.done ? '<button class="linkbtn" data-v="music">♪ Soundtrack Explorer</button>' : ''}</div>`, { cls: 'clear' });
       audio.unlock();
-      if (input.touchMode && (v === 'new' || v === 'continue' || v === 'story' || v === 'tramp')) {
+      if (input.touchMode && (v === 'new' || v === 'continue' || v === 'story' || v === 'tramp' || v === 'dive')) {
         try { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch?.(() => {}); } catch {}
       }
       if (v === 'new' && started) {
@@ -47,7 +49,9 @@ export function titleScene() {
       else if (v === 'story') { save.set({ stage: 0, path: null }); goStage('room'); }
       else if (v === 'card') { await birthdayCard(); this.menu(); }
       else if (v === 'about') { await aboutCard(); this.menu(); }
+      else if (v === 'music') { await soundtrackExplorer(); audio.play(save.data.done ? 'bounce' : 'title'); this.menu(); }
       else if (v === 'tramp') this.trampMenu();
+      else if (v === 'dive') fadeTo(() => setScene(diveScene({ fromMenu: true })));
       else this.menu();
     },
     async trampMenu() {

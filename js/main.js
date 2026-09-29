@@ -9,6 +9,7 @@ import { goStage } from './levels.js';
 import { trampolineScene } from './tramp.js';
 import { battleScene } from './battle.js';
 import { battingScene } from './batting.js';
+import { diveScene } from './dive.js';
 import { save } from './save.js';
 import { VERSION } from './version.js';
 
@@ -86,7 +87,7 @@ start({
   ui: updateUI,
 });
 
-// Dev shortcuts: ?stage=room|yard|hood|skate|river|pool|newhouse  ?scene=tramp|batting|freida|catfish|sunny  ?unlock
+// Dev shortcuts: ?stage=room|yard|hood|skate|river|pool|newhouse  ?scene=tramp|batting|dive|freida|catfish|sunny  ?unlock
 const q = new URLSearchParams(location.search);
 if (q.has('reset')) { try { localStorage.removeItem('isaac-adventure-v1'); } catch {} location.replace(location.pathname); }
 if (q.has('unlock')) save.set({ done: true });
@@ -95,5 +96,6 @@ if (q.get('stage')) goStage(q.get('stage'));
 else if (scene === 'tramp') setScene(trampolineScene({ timed: true }));
 else if (scene === 'story-tramp') setScene(trampolineScene({ story: true }));
 else if (scene === 'batting') setScene(battingScene());
+else if (scene === 'dive') setScene(diveScene());
 else if (['freida', 'catfish', 'sunny'].includes(scene)) setScene(battleScene(scene));
 else setScene(titleScene());

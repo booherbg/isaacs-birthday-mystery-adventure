@@ -62,6 +62,9 @@ export const audio = {
   play: (name, onEnd) => playSong(name, onEnd),
   stop: () => { cur = null; },
   get song() { return cur ? cur.name : null; },
+  get now() { return ac ? ac.currentTime : 0; },
+  // Soundtrack Explorer visualizer: called as (instrument, [freqs], startTime, duration) or ('drum', char, startTime).
+  onNote: null,
 };
 
 // ---------- building blocks ----------
@@ -174,6 +177,14 @@ const SFX = {
   bell: (t) => { for (let i = 0; i < 3; i++) { osc('sine', 2350, t + i * 0.09, 0.22, 0.07); osc('sine', 3120, t + i * 0.09 + 0.01, 0.16, 0.035); } },
   worm: (t) => { for (let i = 0; i < 4; i++) osc('p25', 330 + i * 60, t + i * 0.1, 0.09, 0.1, { to: 250 + i * 60 }); },
   unlock: (t) => arp(t, ['C6', 'E6', 'G6', 'C7'], 0.07, 'p50', 0.12),
+  // Cannonball Contest: the big one, and the belly flop.
+  sploosh: (t, o) => {
+    const s = o.size || 1;
+    noise(t, 0.5 + s * 0.5, 0.2 + s * 0.2, { type: 'lowpass', f: 2800, to: 300 });
+    noise(t + 0.06, 0.4 + s * 0.3, 0.1 + s * 0.08, { type: 'highpass', f: 3500 });
+    osc('sine', 120, t, 0.25, 0.1 + s * 0.2, { to: 38 });
+  },
+  smack: (t) => { noise(t, 0.09, 0.5, { type: 'highpass', f: 1600 }); osc('sine', 170, t, 0.14, 0.3, { to: 55 }); noise(t + 0.05, 0.5, 0.14, { type: 'lowpass', f: 2200, to: 400 }); },
 };
 
 // ---------- music ----------
@@ -202,6 +213,13 @@ const INST = {
   sid: { type: 'p25', vol: 0.045, arp: 1 / 36, decay: 0.25, sus: 0.5 },
   harp: { type: 'p12', vol: 0.065, pluck: 0.45 },
   sbass: { type: 'triangle', vol: 0.3, buzz: 0.07 },
+  steel: { type: 'sine', vol: 0.2, pluck: 0.5, dbl: ['sine', 0.07, 1200] }, // steel drum: a plucked sine + its octave
+  // Music boxes + toys (birthday card, Toniebox): one or two voices each, but rich overtones.
+  // partials: [cents above the note, volume, decay (× pluck), wave]
+  tine: { type: 'sine', vol: 0.55, pluck: 1.3, partials: [[1757, 0.19, 0.25], [2920, 0.085, 0.08]], click: 0.1 }, // music-box comb: inharmonic 2.76× + 5.4× ring
+  kalimba: { type: 'sine', vol: 0.66, pluck: 0.9, attack: 0.006, partials: [[1902, 0.13, 0.2], [3078, 0.055, 0.06]] }, // thumb piano: buzzy 3×, glassy 5.9× ping
+  toypiano: { type: 'p25', vol: 0.4, pluck: 0.5, partials: [[12, 0.21, 1, 'p12'], [1200, 0.17, 0.5]] },
+  honky: { type: 'p50', vol: 0.28, pluck: 0.7, partials: [[16, 0.25, 1, 'p50'], [-1200, 0.19, 0.8, 'triangle']] }, // two detuned voices beat against each other
 };
 function playNote(inst, fs, t, dur, extra = 1) {
   const I = INST[inst];
@@ -211,7 +229,12 @@ function playNote(inst, fs, t, dur, extra = 1) {
   if (I.arp) return voice(I.type, fs[0], t, d, vol, { steps: fs, stepT: I.arp, decay: I.decay, sus: I.sus });
   for (const f of fs) {
     const vib = I.vib ? f * I.vib / 1000 : 0;
-    if (I.pluck) voice(I.type, f, t, d, vol, { pluck: I.pluck, attack: 0.003 });
+    if (I.pluck) {
+      voice(I.type, f, t, d, vol, { pluck: I.pluck, attack: I.attack || 0.003 });
+      if (I.dbl) voice(I.dbl[0], f, t, d, I.dbl[1] * extra, { pluck: I.pluck * 0.6, attack: 0.003, cents: I.dbl[2] });
+      for (const [cents, pv, dm, type] of I.partials || []) voice(type || 'sine', f, t, d, pv * extra, { pluck: I.pluck * dm, attack: 0.002, cents });
+      if (I.click) noise(t, 0.015, I.click * extra, { type: 'highpass', f: 5000, dest: musicBus });
+    }
     else if (I.buzz) { voice(I.type, f, t, d, vol); voice('p50', f, t, d, I.buzz * extra, { sweep: 1800, decay: 0.15, sus: 0.35 }); }
     else if (I.vibDelay) {
       voice(I.type, f, t, d, vol, { vib, vibDelay: I.vibDelay, attack: I.attack });
@@ -255,6 +278,9 @@ function drum(ch, t) {
   else if (ch === 's') { noise(t, 0.12, 0.22, { type: 'highpass', f: 1200, dest: musicBus }); osc('triangle', 220, t, 0.05, 0.12, { to: 140, dest: musicBus }); }
   else if (ch === 'h') noise(t, 0.035, 0.08, { type: 'highpass', f: 7000, dest: musicBus });
   else if (ch === 'o') noise(t, 0.14, 0.07, { type: 'highpass', f: 6000, dest: musicBus });
+  else if (ch === 't') { osc('triangle', 210, t, 0.16, 0.36, { to: 95, dest: musicBus }); noise(t, 0.05, 0.06, { type: 'lowpass', f: 1200, dest: musicBus }); }
+  else if (ch === 'c') { drum('k', t); noise(t, 0.9, 0.11, { type: 'highpass', f: 4500, dest: musicBus }); }
+  else if (ch === 'w') { osc('sawtooth', 760, t, 0.08, 0.07, { to: 430, dest: musicBus }); osc('p50', 1050, t, 0.05, 0.035, { to: 600, dest: musicBus }); } // a tiny "woof"
 }
 
 let cur = null;
@@ -281,8 +307,9 @@ function schedule() {
       const e = tr.byStep.get(s.loop === false ? step : step % tr.len);
       if (!e) continue;
       playNote(tr.inst, e.f, cur.next, e.len * cur.dt, tr.extra);
+      audio.onNote?.(tr.inst, e.f, cur.next, e.len * cur.dt);
     }
-    if (s.drums) { const ch = s.drums[step % s.drums.length]; if (ch !== '.') drum(ch, cur.next); }
+    if (s.drums) { const ch = s.drums[step % s.drums.length]; if (ch !== '.') { drum(ch, cur.next); audio.onNote?.('drum', ch, cur.next, cur.dt); } }
     cur.step++; cur.next += cur.dt;
   }
 }
@@ -296,7 +323,7 @@ const bounce = (roots, perBar = 8) => roots.map((r) => {
 const CH = {
   C: 'C4+E4+G4', G7: 'B3+D4+F4+G4', G: 'B3+D4+G4', A7: 'C#4+E4+G4+A4', Dm: 'D4+F4+A4', D7: 'D4+F#4+A4+C5',
   Am: 'A3+C4+E4', F: 'F4+A4+C5', C7: 'E4+G4+A#4+C5', E7: 'E4+G#4+B4+D5', Em: 'E4+G4+B4', D: 'D4+F#4+A4', B7: 'D#4+F#4+A4+B4',
-  Bb: 'A#3+D4+F4',
+  Bb: 'A#3+D4+F4', Bm: 'B3+D4+F#4', Gm: 'G3+A#3+D4',
 };
 const waltz = (chords, beat = 1) => chords.map((c) => `r:${beat} ${CH[c]}:${beat} ${CH[c]}:${beat}`).join(' ');
 
@@ -352,21 +379,30 @@ export const SONGS = {
       ['bass', 'G2:2 D3:2 G2:2 D3:2 C3:2 G3:2 G2:2 D3:2 C3:2 G3:2 A2:2 E3:2 D3:2 A3:2 D3:2 A3:2 G2:2 D3:2 E3:2 B3:2 C3:2 G3:2 D3:2 A3:2 C3:2 G3:2 D3:2 A3:2 G2:2 D3:2 G2:2 r:2'],
     ],
   },
-  // Island Park Pool — sunny "route" tune.
+  // Island Park Pool — sunny "route" tune; the bridge turns into a steel-drum calypso (it's the pool!).
   pool: {
-    bpm: 144, drums: 'khshkhsh',
+    bpm: 144, echo: 0.1,
+    drums: 'chshkhsh' + 'khshkhsh'.repeat(6) + 'khshkstt' + 'k.hks.h.'.repeat(7) + 'k.hkssss',
     tracks: [
-      ['lead', 'C5 E5 G5:2 A5 G5 E5:2 F5 A5 C6:2 B5 A5 G5:2 E5 G5 C6:2 D6 C6 A5:2 G5:6 r:2 A5 B5 C6:2 G5 E5 C5:2 F5 G5 A5:2 D5 E5 F5:2 E5 F5 G5 A5 B5:2 D6:2 C6:6 r:2'],
-      ['bass', bounce(['C3', 'F2', 'A2', 'G2', 'C3', 'F2', 'G2', 'C3'])],
-      ['arp', rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('E5 A5 C6 A5', 2) + ' ' + rep('D5 G5 B5 G5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 G5 B5 G5', 2) + ' ' + rep('E5 G5 C6 G5', 2), 0.7],
+      ['hero', 'C5 E5 G5:2 A5 G5 E5:2 F5 A5 C6:2 B5 A5 G5:2 E5 G5 C6:2 D6 C6 A5:2 G5:6 r:2 A5 B5 C6:2 G5 E5 C5:2 F5 G5 A5:2 D5 E5 F5:2 E5 F5 G5 A5 B5:2 D6:2 C6:6 r:2 r:64'],
+      ['steel', 'r:64 A5:3 C6:3 A5:2 B5:3 D6:3 B5:2 G5 E5 G5 B5 E6:2 D6:2 C6:3 A5:3 E5:2 F5:3 A5:3 D6:2 B5 A5 G5 A5 B5:2 D6:2 E6:3 C6:3 G5:2 F5 G5 A5 B5 D6:2 B5:2'],
+      ['sbass', bounce(['C3', 'F2', 'A2', 'G2', 'C3', 'F2', 'G2', 'C3']) + ' ' + bounce(['F2', 'G2', 'E2', 'A2', 'D2', 'G2', 'C3', 'G2'])],
+      ['arp', rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('E5 A5 C6 A5', 2) + ' ' + rep('D5 G5 B5 G5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 G5 B5 G5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' +
+        rep('F4 A4 C5 A4', 2) + ' ' + rep('G4 B4 D5 B4', 2) + ' ' + rep('E4 G4 B4 G4', 2) + ' ' + rep('E4 A4 C5 A4', 2) + ' ' + rep('D4 F4 A4 F4', 2) + ' ' + rep('G4 B4 D5 B4', 2) + ' ' + rep('E4 G4 C5 G4', 2) + ' ' + rep('F4 G4 B4 G4', 2), 0.7],
     ],
   },
-  // "A wild ___ appeared!" battle loop.
+  // "A wild ___ appeared!" — fast E minor, same drums, now with Commodore chord arps and a buzzy filter bass.
+  // B: a driving 3-3-2 bridge with a countermelody, then a tom fill back to the top.
   battle: {
-    bpm: 176, drums: 'khskkhsh',
+    bpm: 176, echo: 0.1,
+    drums: 'chskkhsh' + 'khskkhsh'.repeat(6) + 'khskk.tt' + 'chskkhsh' + 'khskkhsh'.repeat(5) + 'kh.kkh.k' + 'kttkttss',
     tracks: [
-      ['lead', 'B4:2 E5:2 G5:2 F#5 E5 F#5:2 D5:2 B4:4 C5:2 E5:2 G5:2 A5 G5 F#5:4 D5:2 F#5:2 B5:2 G5:2 E5:2 G5 B5 A5:2 F#5:2 D5:4 C6:2 B5:2 A5:2 G5 F#5 E5:4 F#5:2 D#5:2'],
-      ['bass', rep('E2 E3 E2 E3 D3 E2 B2 E2', 2) + ' C2 C3 C2 C3 B2 C2 G2 C2 D2 D3 D2 D3 C3 D2 A2 D2 ' + rep('E2 E3 E2 E3 D3 E2 B2 E2', 1) + ' D2 D3 D2 D3 C3 D2 A2 D2 C2 C3 C2 C3 B2 C2 G2 C2 B1 B2 B1 B2 A2 B1 F#2 B1'],
+      ['hero', 'B4:2 E5:2 G5:2 F#5 E5 F#5:2 D5:2 B4:4 C5:2 E5:2 G5:2 A5 G5 F#5:4 D5:2 F#5:2 B5:2 G5:2 E5:2 G5 B5 A5:2 F#5:2 D5:4 C6:2 B5:2 A5:2 G5 F#5 E5:4 F#5:2 D#5:2 ' +
+        'A5:3 C6:3 E6:2 D#6:3 B5:3 F#5:2 G5:2 B5:2 E6:4 D6 E6 D6 B5 A5:2 G5:2 E5:3 G5:3 C6:2 D6:3 A5:3 F#5:2 D#5 F#5 A5 B5 D#6:2 C6:2 B5:4 A5 G5 F#5 D#5'],
+      ['sid', ['Em', 'Bm', 'C', 'D', 'Em', 'D', 'C', 'B7', 'Am', 'B7', 'Em', 'Em', 'C', 'D', 'B7', 'B7'].map((c) => `${CH[c]}:3 ${CH[c]}:3 ${CH[c]}:2`).join(' ')],
+      ['harm', 'r:64 C5:8 D#5:8 E5:8 D5:8 E5:8 F#5:8 D#5:8 F#5:8'],
+      ['sbass', rep('E2 E3 E2 E3 D3 E2 B2 E2', 2) + ' C2 C3 C2 C3 B2 C2 G2 C2 D2 D3 D2 D3 C3 D2 A2 D2 ' + rep('E2 E3 E2 E3 D3 E2 B2 E2', 1) + ' D2 D3 D2 D3 C3 D2 A2 D2 C2 C3 C2 C3 B2 C2 G2 C2 B1 B2 B1 B2 A2 B1 F#2 B1 ' +
+        bounce(['A2', 'B2', 'E2', 'D2', 'C2', 'D2', 'B1', 'B1'])],
     ],
   },
   // Happy Birthday (public domain) — festive, with drums, 3/4 in 16th steps.
@@ -382,23 +418,28 @@ export const SONGS = {
   birthdaySoft: {
     bpm: 92, spb: 4, echo: 0.3,
     tracks: [
-      ['bell', 'G5:3 G5 A5:4 G5:4 C6:4 B5:8 G5:3 G5 A5:4 G5:4 D6:4 C6:8 G5:3 G5 G6:4 E6:4 C6:4 B5:4 A5:4 F6:3 F6 E6:4 C6:4 D6:4 C6:12 r:8'],
-      ['soft', 'r:4 C4:12 G3:12 G3:12 C4:12 C4:12 F3:12 C4:4 G3:8 C4:12 r:8', 0.8],
+      ['tine', 'G5:3 G5 A5:4 G5:4 C6:4 B5:8 G5:3 G5 A5:4 G5:4 D6:4 C6:8 G5:3 G5 G6:4 E6:4 C6:4 B5:4 A5:4 F6:3 F6 E6:4 C6:4 D6:4 C6:12 r:8'],
+      ['tine', 'r:4 C4:12 G3:12 G3:12 C4:12 C4:12 F3:12 C4:4 G3:8 C4:12 r:8', 0.75],
     ],
   },
-  // Trampoline Time — bouncy and bright.
+  // Trampoline Time — bouncy and bright; the bridge climbs toward Sky Zone (big leap in bar 14).
   bounce: {
-    bpm: 150, drums: 'khshkhsh',
+    bpm: 150, echo: 0.08,
+    drums: 'chshkhsh' + 'khshkhsh'.repeat(6) + 'khshkstt' + 'k.hsk.hs'.repeat(3) + 'k.hskkss' + 'khshkhsh'.repeat(3) + 'ksktsstt',
     tracks: [
-      ['lead', 'F5 A5 C6 A5 F5:2 C5:2 D5 F5 A5 F5 D5:2 A4:2 A#4 D5 F5 A#5 A5:2 G5:2 C5 E5 G5 C6 A#5:2 G5:2 F5 A5 C6 A5 F6:2 C6:2 D6 C6 A#5 A5 G5:2 F5:2 E5 F5 G5 A5 A#5 G5 E5 C5 F5:2 A5:2 F5:2 r:2'],
-      ['bass', bounce(['F2', 'D2', 'A#1', 'C2', 'F2', 'A#1', 'C2', 'F2'])],
-      ['arp', rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A5 F5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2), 0.6],
+      ['hero', 'F5 A5 C6 A5 F5:2 C5:2 D5 F5 A5 F5 D5:2 A4:2 A#4 D5 F5 A#5 A5:2 G5:2 C5 E5 G5 C6 A#5:2 G5:2 F5 A5 C6 A5 F6:2 C6:2 D6 C6 A#5 A5 G5:2 F5:2 E5 F5 G5 A5 A#5 G5 E5 C5 F5:2 A5:2 F5:2 r:2 ' +
+        'D6:3 C6 A#5:2 F5:2 E6:3 D6 C6:2 G5:2 C6:2 A5:2 E5:2 A5 C6 D6:6 r:2 A#5:3 A5 G5:2 D5:2 E5 G5 C6 E6 G6:4 F6:2 E6 D6 C6:2 A5:2 G5:2 A#5:2 E5:2 C5:2'],
+      ['harm', 'r:64 F5:8 G5:8 E5:8 F5:8 D5:8 E5:8 C5:8 E5:4 G5:4'],
+      ['sbass', bounce(['F2', 'D2', 'A#1', 'C2', 'F2', 'A#1', 'C2', 'F2']) + ' ' + bounce(['A#1', 'C2', 'A1', 'D2', 'G1', 'C2', 'F2', 'C2'])],
+      ['arp', rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A5 F5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' +
+        rep('D5 F5 A#5 F5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('E5 A5 C6 A5', 2) + ' ' + rep('D5 F5 A5 F5', 2) + ' ' + rep('D5 G5 A#5 G5', 2) + ' ' + rep('E5 G5 C6 G5', 2) + ' ' + rep('F5 A5 C6 A5', 2) + ' ' + rep('E5 G5 A#5 G5', 2), 0.6],
     ],
   },
   // Toniebox tunes (music box, no loop). Twinkle Twinkle is public domain; the bark song is original.
-  tonie1: { bpm: 150, spb: 1, loop: false, echo: 0.25, tracks: [['bell', 'C5 C5 G5 G5 A5 A5 G5:2 F5 F5 E5 E5 D5 D5 C5:2'], ['soft', 'C4:4 F3:2 C4:2 F3:2 C4:2 G3:2 C4:2', 0.7]] },
-  tonie2: { bpm: 140, spb: 1, loop: false, drums: 'k.s.', tracks: [['lead', 'G4 B4 D5 B4 G4:2 r:2 A4 C5 E5 C5 A4:2 r:2 B4 D5 G5 D5 C5 A4 F#4 A4 G4:2 r:2'], ['bass', 'G2:4 G2:4 A2:4 D3:4 G2:4 D3:2 G2:2']] },
-  tonie3: { bpm: 160, spb: 1, loop: false, echo: 0.25, tracks: [['bell', 'C5:2 C6 A5 G5 E5 G5:3 D5:3 C5:2 C6 A5 G5 E5 G5:6'], ['soft', 'C4:3 C4:3 C4:3 G3:3 C4:3 C4:3 C4:6', 0.7]] },
+  // Each has its own little identity: a kalimba lullaby, a toy-piano march with barks on the beat, a honky-tonk waltz.
+  tonie1: { bpm: 150, spb: 1, loop: false, echo: 0.25, tracks: [['kalimba', 'C5 C5 G5 G5 A5 A5 G5:2 F5 F5 E5 E5 D5 D5 C5:2'], ['kalimba', 'C4:4 F3:2 C4:2 F3:2 C4:2 G3:2 C4:2', 0.7]] },
+  tonie2: { bpm: 140, spb: 1, loop: false, echo: 0.08, drums: 'k.w.', tracks: [['toypiano', 'G4 B4 D5 B4 G4:2 r:2 A4 C5 E5 C5 A4:2 r:2 B4 D5 G5 D5 C5 A4 F#4 A4 G4:2 r:2'], ['toypiano', 'G3:4 G3:4 A3:4 D3:4 G3:4 D3:2 G3:2', 0.8]] },
+  tonie3: { bpm: 160, spb: 1, loop: false, echo: 0.1, tracks: [['honky', 'C5:2 C6 A5 G5 E5 G5:3 D5:3 C5:2 C6 A5 G5 E5 G5:6'], ['honky', 'C3:3 C3:3 C3:3 G2:3 C3:3 C3:3 C3:6', 0.8], ['honky', waltz(['C', 'C', 'C', 'G7', 'C', 'C', 'C', 'C']), 0.45]] },
 
   // Short jingles (no loop).
   win: { bpm: 180, loop: false, tracks: [['lead', 'C5 E5 G5 C6:3 G5 C6:4'], ['bass', 'C3:2 G3:2 C4:6']] },

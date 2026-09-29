@@ -13,7 +13,8 @@ const K = CONFIG.kid.toUpperCase();
 const GROUND = 124, MAT = GROUND - 20, CX = 128, HALF = 56;
 const GRAV = 520;
 const HEIGHTS = [0, 60, 88, 125, 175, 240, 320, 425, 555, 715, 900];
-const MAXP = 10;
+// The 30-second first bounce after the reveal: a shorter POW meter that still tops out in OUTER SPACE.
+const STORY_HEIGHTS = [0, 60, 88, 125, 200, 320, 520, 820];
 const FLIP_T = 0.52, SPIN_T = 0.42;
 
 export const HATS = [
@@ -28,6 +29,7 @@ export const HATS = [
   { id: 'crown', name: 'Space Crown', need: 'Bounce to SPACE', test: (r) => r.height >= 800 },
   { id: 'collector', name: 'Card Collector Cap', need: 'Fill the Card Binder (story mode)' },
   { id: 'fishing', name: 'Fishing Hat', need: 'Catch the big catfish (river path)' },
+  { id: 'goggles', name: 'Swim Goggles', need: 'Score a perfect 30 dive (Cannonball Contest)' },
 ];
 
 const ITEMS = [
@@ -36,9 +38,10 @@ const ITEMS = [
 ];
 
 export function trampolineScene({ story = false, timed = true } = {}) {
-  const T = story ? 35 : timed ? 60 : Infinity;
+  const T = story ? 30 : timed ? 60 : Infinity;
+  const HT = story ? STORY_HEIGHTS : HEIGHTS, MAXP = HT.length - 1;
   const S = {
-    name: 'tramp', story, timed: T !== Infinity,
+    name: 'tramp', story, timed: T !== Infinity, maxP: MAXP,
     parts: new Particles(), pops: new Pops(),
     p: { x: CX, y: MAT - 1, vx: 0, vy: -Math.sqrt(2 * GRAV * HEIGHTS[3]), rot: 0, flipDir: 1, flips: [], flipT: 0, spinT: 0, spins: 0, worm: false, contact: 0, daze: 0, face: 1, sink: 0, landWorm: 0 },
     power: 3, combo: 0, score: 0, time: T, items: [], camY: 0, lastA: -9, best: '', bestHeight: 0, bestCombo: 0, tricksDone: 0,
@@ -179,15 +182,16 @@ export function trampolineScene({ story = false, timed = true } = {}) {
       if (p.perfect && !p.bonked) {
         this.perfStreak = (this.perfStreak || 0) + 1; this.bestPerfStreak = Math.max(this.bestPerfStreak || 0, this.perfStreak);
         this.power = Math.min(MAXP, this.power + 1);
+        if (this.power === MAXP && story) this.pops.add('MAX POW!', p.x, p.y - 36, '#ff7d98', 1, 1.2);
         this.score += 10 * Math.max(1, this.combo);
         this.pops.add('PERFECT!', p.x, p.y - 26, '#9fe35f', 1, 1);
         this.parts.burst(p.x, MAT + 2, 14, { colors: ['#9fe35f', '#ffffff', '#ffde5c'], speed: 90, g: 120, life: 0.5 });
         if (this.power >= 7) game.shake = 2;
         audio.sfx('perfect', { combo: this.power });
         this.fans = 1;
-      } else if (!p.bonked) { this.power = Math.max(3, this.power - 1); this.perfStreak = 0; }
+      } else if (!p.bonked) { if (!story) this.power = Math.max(3, this.power - 1); this.perfStreak = 0; } // story mode: only bonks/falls cost power
       p.bonked = false; p.perfect = false;
-      p.vy = -Math.sqrt(2 * GRAV * HEIGHTS[this.power]);
+      p.vy = -Math.sqrt(2 * GRAV * HT[this.power]);
       audio.sfx('boing', { p: this.power });
       this.parts.burst(p.x, MAT + 2, 6, { colors: ['#ffffff', '#6aa6ff'], speed: 40, g: 200, life: 0.4 });
       p.sink = 0;
@@ -207,7 +211,7 @@ export function trampolineScene({ story = false, timed = true } = {}) {
     },
     updateItems(dt) {
       const p = this.p;
-      const reach = HEIGHTS[Math.min(MAXP, this.power + 2)] + 30;
+      const reach = HT[Math.min(MAXP, this.power + 2)] + 30;
       while (this.items.length < 6) {
         const opts = ITEMS.filter((i) => i.min <= reach);
         const it = pick(opts);
@@ -337,7 +341,8 @@ function renderTramp(S) {
   G.restore();
   // power meter
   rect(W - 12, 30, 8, 64, '#2a1f33');
-  for (let i = 0; i < MAXP; i++) rect(W - 11, 92 - (i + 1) * 6, 6, 5, i < S.power ? A.mix('#9fe35f', '#ff5d73', i / 9) : '#4a4058');
+  const n = S.maxP, seg = Math.floor(60 / n);
+  for (let i = 0; i < n; i++) rect(W - 11, 92 - (i + 1) * seg, 6, seg - 1, i < S.power ? A.mix('#9fe35f', '#ff5d73', i / (n - 1)) : '#4a4058');
   pixelText('POW', W - 16, 96, '#fff', 1, '#2a1f33');
 }
 
@@ -391,6 +396,10 @@ export function drawHat(id, g = G) {
     r(-7, -9, 1, 9, '#2a1f33'); r(6, -9, 1, 9, '#2a1f33'); r(-2, 1, 4, 1, '#2a1f33');
   }
   if (id === 'collector') { const c = ['#ff7d98', '#ffde5c', '#8fe8ff', '#9fe35f']; for (let i = 0; i < 11; i++) r(-6 + i, -15 + (i < 1 || i > 9 ? 1 : 0), 1, 5, c[(i + Math.floor(Date.now() / 150)) % 4]); r(4, -11, 5, 2, '#ffcd3c'); r(-1, -14, 2, 2, '#fff'); }
+  if (id === 'goggles') {
+    r(-7, -5, 7, 2, '#e8483f'); r(-7, -5, 7, 1, '#ff7d98');
+    r(-1, -6, 7, 4, '#2a1f33'); r(0, -5, 2, 2, '#5cd6ff'); r(3, -5, 2, 2, '#5cd6ff'); r(0, -5, 1, 1, '#d4f6ff'); r(3, -5, 1, 1, '#d4f6ff');
+  }
   if (id === 'crown') { r(-5, -16, 11, 5, '#ffcd3c'); r(-5, -19, 2, 3, '#ffcd3c'); r(0, -20, 2, 4, '#ffcd3c'); r(4, -19, 2, 3, '#ffcd3c'); r(0, -15, 2, 2, '#e8483f'); r(-4, -14, 1, 1, '#5cd6ff'); r(4, -14, 1, 1, '#5cd6ff'); }
 }
 

@@ -10,6 +10,7 @@ import { save } from './save.js';
 import * as A from './art.js';
 import { battleScene } from './battle.js';
 import { battingScene } from './batting.js';
+import { diveScene } from './dive.js';
 import { trampolineScene } from './tramp.js';
 import { titleScene, birthdayCard } from './title.js';
 
@@ -673,17 +674,53 @@ const pool = {
   width: 1320, ground: 120, startX: 40, item: 'card',
   props: [[180, 22, 7, 'lounge'], [206, 22, 7, 'lounge'], [430, 22, 7, 'lounge'], [612, 10, 30, 'guard'], [790, 22, 7, 'lounge'], [816, 22, 7, 'lounge']],
   bouncers: [[292, 86, 34, 330, 'umbrella'], [506, 82, 34, 360, 'umbrella'], [900, 84, 34, 340, 'umbrella'], [1060, 80, 34, 380, 'umbrella']],
-  inter: [{ x: 776, y: 108, r: 14, label: 'PET', fn: (w, it) => { audio.sfx(it.uses % 2 ? 'purr' : 'meow'); w.pops.add(it.uses % 2 ? 'PURRR...' : '...MRRP?', it.x, it.y - 6, '#fff'); w.hop(w.npcs.fcam, 90); } }],
+  inter: [
+    { x: 776, y: 108, r: 14, label: 'PET', fn: (w, it) => { audio.sfx(it.uses % 2 ? 'purr' : 'meow'); w.pops.add(it.uses % 2 ? 'PURRR...' : '...MRRP?', it.x, it.y - 6, '#fff'); w.hop(w.npcs.fcam, 90); } },
+    { x: 660, y: 94, r: 16, label: 'DIVE!', hidden: true, fn: (w) => goDive(w, { replay: true }) },
+  ],
   items: [[140, 100], [217, 96], [309, 50], [309, 30], [523, 40], [617, 76], [700, 100], [917, 42], [1077, 26], [1150, 98]],
-  setup(w) {
+  setup(w, arg) {
     w.npc('fcam', { idle: SPR.freida.loaf }, 800, { face: 1, y: w.ground - 7 });
+    w.npc('guard', { idle: SPR.guard }, 617, { face: -1, y: w.ground - 30 });
     w.parkedRide = save.data.path === 'river' ? 'bike' : 'board';
     w.triggers.push({ x: 1150, fn: () => wildSunny(w) });
     w.goal = '';
+    if (arg.after === 'dive') {
+      // back from the contest: keep the cards already picked up
+      w.items.forEach((it, i) => { if (poolGot?.[i]) { it.got = true; w.got++; } });
+      w.p.x = 650; w.p.face = 1; w.dog.x = 626;
+      w.inter.find((it) => it.label === 'DIVE!').hidden = false;
+      if (!arg.replay) { w.npc('dad', SPR.dad, 690, { face: -1 }); w.npc('mom', SPR.mom, 712, { face: -1 }); }
+    } else {
+      w.npc('dad', SPR.dad, 666, { face: -1 }); w.npc('mom', SPR.mom, 690, { face: -1 });
+      w.triggers.push({ x: 590, fn: () => cannonballContest(w) });
+    }
   },
   async intro(w) {
     await wait(1.2);
     toast('Bounce on the blue umbrellas!', 2600);
+  },
+  async after(w, arg) {
+    if (arg.replay) return;
+    w.locked = true;
+    await say('dad', "What a SHOW! Okay... Mom and I have to go get something ready. Top secret stuff.");
+    await say('mom', "Proud of you, splash champ! Keep your eyes open for Clue #3... we'll see you REAL soon!");
+    audio.sfx('select');
+    for (const n of [w.npcs.dad, w.npcs.mom]) n.walkTo = { x: 1500, speed: 110 };
+    await wait(0.6);
+    w.locked = false;
+    toast(`Want another go? Stand at the springboard and press ${input.touchMode ? 'DIVE!' : 'SPACE'}.`, 2800);
+    await until(() => w.npcs.mom.x > w.cam.x + W + 20);
+    w.npcs.dad.hidden = w.npcs.mom.hidden = true;
+  },
+  mid(cx, w) {
+    // the springboard by the lifeguard chair (home of the Cannonball Contest)
+    const bx = 632 - cx, g = w.ground;
+    if (bx > -70 && bx < W + 10) {
+      rect(bx, g - 22, 2, 22, '#8a939c'); rect(bx + 6, g - 22, 2, 22, '#8a939c'); for (let y = g - 18; y < g; y += 5) rect(bx, y, 8, 1, '#8a939c');
+      rect(bx + 16, g - 18, 6, 18, '#3d7be0'); rect(bx + 14, g - 19, 10, 2, '#2456ad');
+      rect(bx, g - 24, 58, 4, '#2a1f33'); rect(bx + 1, g - 23, 56, 2, '#e9d8a6'); rect(bx + 1, g - 23, 56, 1, '#3d7be0');
+    }
   },
   bg(cx) {
     A.sky('#5cc2ff', '#d8f3ff');
@@ -692,15 +729,7 @@ const pool = {
     const off = Math.round(cx * 0.5);
     // bathhouse (blue wall, flat roof) at the left, like the photo
     rect(-off - 20, 62, 160, 46, '#c8b89a'); rect(-off - 20, 84, 160, 24, '#2f5fa8'); rect(-off - 20, 60, 160, 3, '#ffffff');
-    // slide tower + big green corkscrew + blue slide
-    const sx = 380 - off;
-    rect(sx, 34, 24, 74, '#e6e6e6'); for (let y = 40; y < 108; y += 8) rect(sx, y, 24, 1, '#b8bcc4');
-    rect(sx - 2, 30, 28, 4, '#2f7fd6');
-    for (let i = 0; i < 70; i++) {
-      const t = i / 70, x = sx + 30 + Math.sin(t * Math.PI * 5) * 26 + t * 60, y = 40 + t * 62;
-      circle(x, y, 5, i % 7 === 0 ? '#2e8a2e' : '#48c23a');
-    }
-    for (let i = 0; i < 50; i++) { const t = i / 50; circle(sx - 4 - t * 90, 44 + t * 60, 3, '#3a7ae0'); }
+    A.poolSlides(380 - off);
     // far umbrellas
     for (let i = 0; i < 6; i++) { const ux = Math.round(i * 110 + 200 - cx * 0.55) % 700; const x = ux < -40 ? ux + 700 : ux; rect(x + 8, 96, 1, 12, '#fff'); tri(x, 97, x + 17, 97, x + 8, 90, '#2f6fd6'); }
     A.chainFence(0, W, 92, 108, 0);
@@ -748,6 +777,21 @@ const pool = {
     for (let i = 0; i < 5; i++) rect(x - 2 + i * (ww + 4) / 4, u.y + 6 + sq, 2, 1, '#ffffff');
   },
 };
+// The Cannonball Contest (js/dive.js) is its own scene; remember which cards were already picked up.
+let poolGot = null;
+function goDive(w, opts) {
+  poolGot = w.items.map((it) => it.got);
+  w.locked = true;
+  fadeTo(() => setScene(diveScene(opts)));
+}
+async function cannonballContest(w) {
+  w.locked = true; w.p.vx = 0;
+  await w.playerTo(636, 60);
+  w.p.face = 1;
+  await say('dad', 'Hey buddy! Perfect timing... the CANNONBALL CONTEST is about to start!');
+  await say('isaac', 'CANNONBAAALL!!!');
+  goDive(w);
+}
 async function wildSunny(w) {
   w.locked = true; cardTally(w);
   const d = w.dog;
@@ -927,9 +971,10 @@ newhouse.drawPlat = () => {};
 export const LEVELS = { room, yard, hood, skate, river, pool, newhouse };
 
 // Called by battles / batting when they finish.
-export function afterBattle(which) {
+export function afterBattle(which, arg) {
   if (which === 'freida') fadeTo(() => setScene(levelScene(yard), { after: 'freida' }));
   if (which === 'batting') goStage('path');
   if (which === 'catfish') { save.data.paths.river = true; save.flush(); goStage('pool'); }
   if (which === 'sunny') goStage('newhouse');
+  if (which === 'dive') fadeTo(() => setScene(levelScene(pool), { after: 'dive', replay: !!arg?.replay }));
 }

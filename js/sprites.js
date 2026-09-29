@@ -147,7 +147,36 @@ const I_LEGS = {
     '..............',
   ],
 };
-function isaac(body, legs) { return build([...I_HEAD, ...I_BODY[body], ...I_LEGS[legs]], { name: `isaac-${body}-${legs}` }); }
+function isaac(body, legs, pal = PAL) { return build([...I_HEAD, ...I_BODY[body], ...I_LEGS[legs]], { name: `isaac-${body}-${legs}`, pal }); }
+// Pool day: same Isaac in a green swim shirt + matching trunks (his scooter/bike colors), bare feet.
+const SWIM = { ...PAL, w: '#4cb944', b: '#2c7a34', B: '#1f5a28', n: '#2c7a34', r: PAL.s };
+
+// ---------------- the lifeguard at Island Park Pool (visor, shades, whistle), faces right ----------------
+const GUARD = [
+  '....wwwwww....',
+  '...wwwwwwwwwww',
+  '..UUuuuuuuU...',
+  '.Uuuuuuuuuuu..',
+  '.Uusssssssuu..',
+  '.usssssssssu..',
+  '.usKKKKsKKKK..',
+  '.ussKKssKKss..',
+  '..ssssssssss..',
+  '..sssssmmmss..',
+  '...ssssssss...',
+  '.....ssss.....',
+  '..srrrrrrrrs..',
+  '.ssrkrrrrkrss.',
+  '.s.rrkrrkrr.s.',
+  '.s.rrryyrrr.s.',
+  '.S.rrrrrrrr.S.',
+  '...rrrrrrrr...',
+  '...RRRRRRRR...',
+  '...RRR..RRR...',
+  '...ss....ss...',
+  '...ss....ss...',
+  '..yyy....yyy..',
+];
 
 // ---------------- Mom (Amanda), faces right ----------------
 const MOM_HEAD = [
@@ -583,6 +612,14 @@ export function buildSprites() {
       jump: I('up', 'jump'), cheer: I('up', 'stand'), ride: I('fwd', 'stand'), kick: I('fwd', 'kick'),
       bike: I('fwd', 'sit'), bikeB: I('fwd', 'sitB'), back: I('back', 'stand'), tuck: I('fwd', 'tuck'),
       star: I('up', 'walkA'), hold: I('fwd', 'stand'),
+    },
+    swim: { idle: isaac('side', 'stand', SWIM), jump: isaac('up', 'jump', SWIM), cheer: isaac('up', 'stand', SWIM), tuck: isaac('fwd', 'tuck', SWIM), walkA: isaac('side', 'walkA', SWIM) },
+    guard: build(GUARD, { name: 'guard' }),
+    // Big Bunny peeking out of Isaac's backpack (ears are drawn live so they can flop — see drawPack)
+    bunnyPack: {
+      face: build(['wwwww', 'wkwkw', 'wwtww', '.www.'], { name: 'bunny-face' }),
+      blink: build(['wwwww', 'wwwww', 'wwtww', '.www.'], { name: 'bunny-blink' }),
+      pack: build(['GGGG', 'gggg', 'gGGg', 'gggg', 'gggg', 'gggg', 'gggg'], { name: 'pack', pal: { ...PAL, g: '#3f9b3a', G: '#2c7a34' } }),
     },
     mom: { idle: build(MOM('b')), walk: build(MOM('a')), wave: build(MOM('b', 'wave')), binoc: build(MOM('b', 'binoc')) },
     dad: { idle: build(DAD('b')), walk: build(DAD('a')), pitch: build(DAD('b', 'pitch')), cheer: build(DAD('b', 'up')) },

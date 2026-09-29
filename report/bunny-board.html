@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Big Bunny Backpack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* One deliberate look: the game's own night-plum backdrop with paper cards (same palette + fonts as the game). */
+  :root {
+    color-scheme: dark;
+    --night: #1c1238; --night-2: #2a1d52; --ink: #2a1f33; --paper: #fffbea; --paper-2: #f3ecd2;
+    --sun: #ffde5c; --blue: #3d7be0; --green: #4cb944; --pink: #ff7d98; --muted: #6b5b7b;
+    --pix: 'Press Start 2P', ui-monospace, monospace;
+    --round: 'Fredoka', ui-rounded, 'Avenir Next', system-ui, sans-serif;
+  }
+  body { background: radial-gradient(ellipse at 50% 0%, var(--night-2), var(--night) 70%); background-color: var(--night); color: #fff; font-family: var(--round); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 48px; display: flex; flex-direction: column; gap: 22px; }
+  header { display: flex; flex-direction: column; gap: 10px; max-width: 68ch; }
+  .eyebrow { font: 9px/1.6 var(--pix); letter-spacing: .08em; color: var(--sun); text-transform: uppercase; }
+  h1 { font: 22px/1.35 var(--pix); margin: 0; text-wrap: balance; text-shadow: 3px 3px 0 var(--ink); }
+  header p { margin: 0; font-size: 17px; font-weight: 500; line-height: 1.5; color: #e9e2ff; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .controls button {
+    font: 600 15px var(--round); color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px;
+    padding: 6px 14px; box-shadow: 0 3px 0 var(--ink); cursor: pointer;
+  }
+  .controls button[aria-pressed="true"] { background: var(--sun); }
+  .controls button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+  .controls span { font-size: 14px; color: #cfc6ee; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 5px 0 #0c0718; display: flex; flex-direction: column; overflow: hidden; }
+  .card.now { background: var(--paper-2); }
+  .card.pick { outline: 4px solid var(--sun); outline-offset: 3px; }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+  .badge { font: 12px var(--pix); background: var(--ink); color: var(--sun); border-radius: 8px; padding: 7px 8px 6px; flex: none; }
+  .card.now .badge { color: #fff; background: var(--muted); }
+  .card h2 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .stage { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 0 14px; align-items: stretch; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; border: 2px solid var(--ink); border-radius: 8px; background: #bfe6ff; }
+  canvas.strip { width: 100%; height: auto; aspect-ratio: 160 / 64; }
+  canvas.zoom { width: 108px; height: 108px; }
+  .card-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .card-body p { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.45; }
+  .moves { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.45; color: #4b3f58; }
+  .note { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .verdict { background: var(--ink); border: 3px solid var(--sun); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+  .verdict b { font: 10px/1.6 var(--pix); color: var(--sun); letter-spacing: .05em; }
+  .verdict p { margin: 0; font-size: 16px; line-height: 1.5; color: #f2edff; }
+  @media (max-width: 420px) { h1 { font-size: 17px; } .stage { grid-template-columns: 1fr; } canvas.zoom { width: 96px; height: 96px; } }
+  @media (prefers-reduced-motion: reduce) { .controls button { transition: none; } }
+</style>
+<style>html, body { margin: 0; }</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Isaac's Birthday Mystery Adventure · sprite review</div>
+    <h1>Big Bunny Backpack</h1>
+    <p>Big Bunny used to be two thin white ears behind Isaac's head, which read like an antenna. Round 1 (A to D) tried four ways to make him obviously Big Bunny; round 2 (E and F) slims down the favorite. Every preview uses the real game sprites at real size (just drawn bigger), walking, stopping, turning around, and jumping.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Preview controls">
+    <button id="pause" aria-pressed="false">Pause</button>
+    <button id="slow" aria-pressed="false">Slow motion</button>
+    <span>Tip: the square on the right of each preview is a close-up of Isaac.</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="verdict">
+    <b>ROUND 2 · GOING WITH E</b>
+    <p>Round 1 pick was B + D (ducks and pops on turns, floppy ears), and the note back was "slightly slimmer, the bunny is dominating the character." E keeps all of that motion at a much smaller size, and it's what's going into the game. F is the fallback if E still feels big.</p>
+  </div>
+</div>
+
+<script>
+// ---- the game's palette + sprite builder (same rules as js/sprites.js: fill rows, 1px ink outline) ----
+const PAL = {
+  k: '#2a1f33', w: '#ffffff', W: '#e6e0d6', s: '#ffdcc4', S: '#efb394', p: '#ff9eaa', t: '#ff7d98',
+  y: '#ffde5c', Y: '#dca437', h: '#fff4b5', b: '#3d7be0', B: '#2a55a3', n: '#2b3a67', r: '#e8483f', m: '#9c2f45',
+  g: '#3f9b3a', G: '#2c7a34', q: '#8ed36f',
+};
+function build(rows) {
+  const w = Math.max(...rows.map((r) => r.length)), c = document.createElement('canvas');
+  c.width = w + 2; c.height = rows.length + 2;
+  const g = c.getContext('2d');
+  const solid = (x, y) => y >= 0 && y < rows.length && x >= 0 && x < rows[y].length && rows[y][x] !== '.';
+  g.fillStyle = PAL.k;
+  for (let y = -1; y <= rows.length; y++) for (let x = -1; x <= w; x++)
+    if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) g.fillRect(x + 1, y + 1, 1, 1);
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') { g.fillStyle = PAL[ch] || '#f0f'; g.fillRect(x + 1, y + 1, 1, 1); } }));
+  return c;
+}
+// Isaac (straight from the game)
+const HEAD = ['...yy.yyy.yy..', '..yhyyyhyyyyy.', '.yyyyYyyyyhyyy', 'yyhyyyyyYyyyyy', 'yyyYyyhyyyyYyy', 'yYyyyYyyyYyyyy', 'yyYysssYsssyy.', 'yYysssskssks..', 'yyYSssskssks..', '.yysspsssspss.', '..yssssmmsss..', '....ssssssss..'];
+const BODY = { side: ['...bbBssBbb...', '..bbbwBBwbbb..', '..bbwwwwwwbb..', '..swwwwwwwws..', '..swwwbbwwws..', '...wwwwwwww...'], up: ['.s.bbBssBbb.s.', '.bbbbwBBwbbbb.', '...wwwwwwww...', '...wwwwwwww...', '...wwwbbwww...', '...wwwwwwww...'] };
+const LEGS = { stand: ['...nnnnnnnn...', '...nnn..nnn...', '....ss..ss....', '...rrr..rrr...'], walkA: ['...nnnnnnnn...', '..nnn....nnn..', '..ss......ss..', '.rrr......rrr.'], walkB: ['...nnnnnnnn...', '....nnnnnn....', '.....ssss.....', '....rrrrrr....'], jump: ['...nnnnnnnn...', '..nnn...nnn...', '.ss......ss...', 'rrr.......rrr.'] };
+const ISAAC = { idle: build([...HEAD, ...BODY.side, ...LEGS.stand]), walkA: build([...HEAD, ...BODY.side, ...LEGS.walkA]), walkB: build([...HEAD, ...BODY.side, ...LEGS.walkB]), jump: build([...HEAD, ...BODY.up, ...LEGS.jump]) };
+
+// Big Bunny, front-facing (white plush, pink inner ears, pink nose)
+const B_EARS = ['.ww.ww.', '.wp.pw.', '.wp.pw.', '.wp.pw.', '.ww.ww.'];
+const B_FACE = ['wwwwwww', 'wwwwwww', 'wkwwwkw', 'wwwtwww', 'wpwwwpw', '.wwwww.'];
+const B_BLINK = ['wwwwwww', 'wwwwwww', 'wwwwwww', 'wwwtwww', 'wpwwwpw', '.wwwww.'];
+const BUN = build([...B_EARS, ...B_FACE]), BUN_BLINK = build([...B_EARS, ...B_BLINK]);
+const BUN_HEAD = build(B_FACE), BUN_HEAD_BLINK = build(B_BLINK);
+const PACK = build(['GGGGGG', 'gggggg', 'gggggg', 'gGGGGg', 'gGggGg', 'gggggg', 'gggggg', 'gggggg']);
+const PAW = build(['ww', 'ww']);
+
+function R(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
+function img(g, c, x, y) { g.drawImage(c, Math.round(x), Math.round(y)); }
+
+// ---- the current backpack (copied from the game) ----
+function packNow(g, st) {
+  const wob = Math.round(Math.sin(st.anim * 0.8));
+  R(g, -8, -18, 5, 9, PAL.k); R(g, -7, -17, 3, 7, PAL.g); R(g, -7, -13, 3, 1, PAL.G);
+  R(g, -8, -24 + wob, 3, 7, PAL.k); R(g, -7, -23 + wob, 1, 6, '#f4efe6');
+  R(g, -5, -23, 3, 6, PAL.k); R(g, -4, -22, 1, 5, '#f4efe6');
+}
+// Everything below is drawn in Isaac's local frame: x = 0 is his center, y = 0 his feet, facing right (mirrored when he faces left).
+// A: whole face peeking out of a bigger pack
+function packA(g, st) {
+  img(g, PACK, -14, -19);
+  const bob = st.moving ? Math.round(Math.abs(Math.sin(st.t * 10))) : 0;
+  img(g, st.blink ? BUN_BLINK : BUN, -15, -32 - bob);
+}
+// B: A + ducks into the pack and pops up on the other side when Isaac turns; blinks
+function packB(g, st) {
+  img(g, PACK, -14, -19);
+  let dy = st.moving ? Math.round(Math.abs(Math.sin(st.t * 10))) : 0;
+  if (st.turn > 0) { const k = 1 - st.turn / 0.42; dy = k < 0.45 ? -Math.round(Math.sin((k / 0.45) * Math.PI / 2) * 9) : -Math.round(Math.cos(((k - 0.45) / 0.55) * Math.PI / 2) * 9) + (k > 0.8 ? 1 : 0); }
+  g.save(); g.beginPath(); g.rect(-20, -40, 20, 23); g.clip(); // tucked below the pack's rim while ducking
+  img(g, st.blink ? BUN_BLINK : BUN, -15, -32 - dy);
+  g.restore();
+  img(g, PACK, -14, -19); R(g, -13, -18, 6, 1, PAL.G);
+}
+// C: A + one paw resting on Isaac's shoulder that waves when he stops
+function packC(g, st) { packA(g, st); }
+function frontC(g, st) {
+  const wave = !st.moving && st.idle > 0.35 ? Math.round((Math.sin(st.t * 14) + 1) * 1.5) : 0;
+  img(g, PAW, -4, -14 - wave);
+}
+// D: floppy ears that swing with running, stopping, turning, and jumping
+function packD(g, st) {
+  img(g, PACK, -14, -19);
+  const hx = -15, hy = -27;
+  img(g, st.blink ? BUN_HEAD_BLINK : BUN_HEAD, hx, hy);
+  for (const ex of [hx + 2.5, hx + 5.5]) ear(g, ex, hy + 1, st.ear + (ex > hx + 4 ? 0.12 : -0.05));
+}
+// E / F: B + D, slimmed down so Isaac stays the star — a small face, short floppy ears, a pack about today's size.
+const SLIM_E = { face: build(['wwwww', 'wkwkw', 'wwtww', '.www.']), blink: build(['wwwww', 'wwwww', 'wwtww', '.www.']), pack: build(['GGGG', 'gggg', 'gGGg', 'gggg', 'gggg', 'gggg', 'gggg']), earLen: 5, px: -12, pw: 6 };
+const SLIM_F = { face: build(['wkwkw', 'wwtww', '.www.']), blink: build(['wwwww', 'wwtww', '.www.']), pack: build(['GGG', 'ggg', 'gGg', 'ggg', 'ggg', 'ggg']), earLen: 4, px: -11, pw: 5 };
+function slim(S) {
+  return (g, st) => {
+    const top = -18, fh = S.face.height;
+    img(g, S.pack, S.px, top);
+    let dy = st.moving ? Math.round(Math.abs(Math.sin(st.t * 10))) : 0;
+    if (st.turn > 0) { const k = 1 - st.turn / 0.42; dy = k < 0.45 ? -Math.round(Math.sin((k / 0.45) * Math.PI / 2) * (fh + 1)) : -Math.round(Math.cos(((k - 0.45) / 0.55) * Math.PI / 2) * (fh + 1)); }
+    const hx = S.px - 1, hy = top - fh + 2 - dy;
+    g.save(); g.beginPath(); g.rect(-24, -44, 24, 44 + top + 1); g.clip();
+    const w = S.face.width;
+    for (const [ex, tilt] of [[hx + 1, -0.05], [hx + w - 2, 0.12]]) slimEar(g, ex, hy + 1, st.ear + tilt, S.earLen);
+    img(g, st.blink ? S.blink : S.face, hx, hy);
+    g.restore();
+    img(g, S.pack, S.px, top);
+  };
+}
+function slimEar(g, x, y, ang, L) {
+  const sx = Math.sin(ang), sy = -Math.cos(ang), pts = [];
+  for (let i = 0; i <= L; i++) pts.push([x + sx * i, y + sy * i]);
+  for (const [px, py] of pts) R(g, px - 1, py - 1, 3, 3, PAL.k);
+  for (const [px, py] of pts) R(g, px, py, 1, 1, PAL.w);
+  for (let i = 1; i < L; i++) R(g, pts[i][0] + (sx >= 0 ? -0 : 0), pts[i][1], 1, 1, i % 2 ? PAL.p : PAL.w);
+}
+function ear(g, x, y, ang) {
+  const L = 6, sx = Math.sin(ang), sy = -Math.cos(ang), pts = [];
+  for (let i = 0; i <= L; i++) pts.push([x + sx * i, y + sy * i]);
+  for (const [px, py] of pts) R(g, px - 1.5, py - 1, 4, 3, PAL.k);
+  for (const [px, py] of pts) R(g, px - 0.5, py, 2, 1, PAL.w);
+  for (let i = 1; i < L - 1; i++) R(g, pts[i][0] + (sx > 0 ? 0 : 0.5), pts[i][1], 1, 1, PAL.p);
+}
+
+const OPTIONS = [
+  { id: 'now', letter: 'NOW', name: 'Today in the game', pack: packNow, text: 'A tiny green pack with two 1-pixel ears poking up right behind his head. From a normal distance it reads as an antenna.', moves: ['One ear wiggles a little while walking'] },
+  { id: 'A', letter: 'A', name: 'Peekaboo', pack: packA, text: "A slightly bigger pack with Big Bunny's whole head sticking out of the top: long pink-lined ears, button eyes, a pink nose, and rosy cheeks.", moves: ['Bobs along with each step', 'Blinks every few seconds'] },
+  { id: 'B', letter: 'B', name: 'Peekaboo + turn-around pop', pack: packB, text: 'Peekaboo, plus a little show when Isaac turns around: Big Bunny ducks down into the pack and pops back up on the new side.', moves: ['Ducks and pops on every turn', 'Bobs with steps, blinks'] },
+  { id: 'C', letter: 'C', name: 'Shoulder paw', pack: packC, front: frontC, text: 'Peekaboo, with one white paw resting on Isaac\'s shoulder like he\'s holding on for the ride. When Isaac stops, the paw waves.', moves: ['Paw waves when standing still', 'Bobs with steps, blinks'] },
+  { id: 'D', letter: 'D', name: 'Floppy ears', pack: packD, text: 'Big Bunny\'s face peeks out, and his long ears are floppy: they stream back when running, swing forward when Isaac stops or turns, and flop around on jumps.', moves: ['Ears lean back at running speed', 'Swing and settle on stops and turns', 'Flop up and down with jumps'] },
+  { id: 'E', letter: 'E', name: 'B + D, slim', pack: slim(SLIM_E), text: 'Round 2, after "B + D but slimmer." A smaller face (5 pixels wide), short floppy ears, and a pack close to today\'s size, so Isaac stays the star.', moves: ['Ducks and pops on turns (B)', 'Floppy ears (D)', 'Blinks, bobs with steps'] },
+  { id: 'F', letter: 'F', name: 'B + D, slimmer', pack: slim(SLIM_F), text: 'An even smaller take: just the eyes, nose, and ears peeking over today\'s pack. Subtler, still clearly a bunny.', moves: ['Same motion as E', 'Pack exactly today\'s size'] },
+];
+
+// ---- one shared walk loop: walk right, stop, turn, walk left, stop, jump, turn back ----
+const W = 160, H = 64, GROUND = 52, LOOP = 6.4;
+function motion(t) {
+  const u = t % LOOP;
+  if (u < 2.0) return { x: 40 + u * 40, face: 1, moving: true, jump: 0 };
+  if (u < 2.7) return { x: 120, face: 1, moving: false, jump: 0 };
+  if (u < 4.7) return { x: 120 - (u - 2.7) * 40, face: -1, moving: true, jump: 0 };
+  if (u < 5.2) return { x: 40, face: -1, moving: false, jump: 0 };
+  if (u < 5.9) { const k = (u - 5.2) / 0.7; return { x: 40, face: -1, moving: false, jump: Math.sin(k * Math.PI) * 18, rising: k < 0.5 }; }
+  return { x: 40, face: -1, moving: false, jump: 0 };
+}
+
+const cards = OPTIONS.map((o) => {
+  const el = document.createElement('article');
+  el.className = 'card' + (o.id === 'now' ? ' now' : '') + (o.id === 'E' ? ' pick' : '');
+  el.innerHTML = `<div class="card-head"><span class="badge">${o.letter}</span><h2>${o.name}</h2></div>
+    <div class="stage"><canvas class="strip" width="${W}" height="${H}" aria-label="${o.name}: Isaac walking with the backpack"></canvas><canvas class="zoom" width="36" height="36" aria-hidden="true"></canvas></div>
+    <div class="card-body"><p>${o.text}</p><ul class="moves">${o.moves.map((m) => `<li>${m}</li>`).join('')}</ul></div>`;
+  document.getElementById('grid').appendChild(el);
+  const [strip, zoom] = el.querySelectorAll('canvas');
+  return { o, g: strip.getContext('2d'), z: zoom.getContext('2d'), strip, st: { t: 0, anim: 0, turn: 0, face: 1, ear: 0.5, earV: 0, idle: 0, blink: false, moving: false } };
+});
+
+function scene(g) {
+  const sky = g.createLinearGradient(0, 0, 0, GROUND); sky.addColorStop(0, '#79c8ff'); sky.addColorStop(1, '#d8f0ff');
+  g.fillStyle = sky; g.fillRect(0, 0, W, GROUND);
+  R(g, 0, 30, W, 22, '#5aa05a'); for (let x = 0; x < W; x += 13) R(g, x, 26 + (x % 3), 12, 6, '#4a8c4c');
+  R(g, 0, GROUND, W, H - GROUND, '#62b34f'); R(g, 0, GROUND, W, 2, '#8ed36f');
+  R(g, 0, GROUND + 6, W, 6, '#d6d3cc');
+  for (let x = 6; x < W; x += 22) { R(g, x, GROUND - 3, 1, 3, '#2c7a34'); R(g, x - 1, GROUND - 5, 3, 2, x % 2 ? '#ff9ec8' : '#ffffff'); }
+}
+
+let paused = false, slow = false, clock = 0, last = 0;
+document.getElementById('pause').onclick = (e) => { paused = !paused; e.target.setAttribute('aria-pressed', paused); e.target.textContent = paused ? 'Play' : 'Pause'; };
+document.getElementById('slow').onclick = (e) => { slow = !slow; e.target.setAttribute('aria-pressed', slow); };
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  if (!paused) clock += dt * (slow ? 0.3 : 1);
+  const m = motion(clock), m2 = motion(clock - 0.05);
+  const vx = (m.x - m2.x) / 0.05, vy = -(m.jump - m2.jump) / 0.05;
+  for (const c of cards) {
+    const { g, st, o } = c, d = paused ? 0 : dt * (slow ? 0.3 : 1);
+    st.t = clock; st.moving = m.moving;
+    st.anim += m.moving ? d * 10 : 0;
+    st.idle = m.moving ? 0 : st.idle + d;
+    if (m.face !== st.face) { st.face = m.face; st.turn = 0.42; st.earV += 9; }
+    st.turn = Math.max(0, st.turn - d);
+    st.blink = (clock % 3.1) < 0.13;
+    // ear spring (angle toward Isaac's back is positive): lean back with speed, flop with vertical motion
+    const target = 0.25 + Math.min(0.9, Math.abs(vx) / 45) * 0.8 + (m.jump ? (m.rising ? 0.9 : -0.35) : 0);
+    st.earV += ((target - st.ear) * 90 - st.earV * 7) * d; st.ear += st.earV * d;
+    if (Math.abs(vx) < 1 && st.wasMoving) st.earV -= 7; // stopping: ears swing forward
+    st.wasMoving = Math.abs(vx) > 1;
+    // draw
+    scene(g);
+    const walk = [ISAAC.walkA, ISAAC.idle, ISAAC.walkB, ISAAC.idle][Math.floor(st.anim / 1.6) % 4];
+    const body = m.jump ? ISAAC.jump : m.moving ? walk : ISAAC.idle;
+    const x = Math.round(m.x), y = Math.round(GROUND - m.jump);
+    g.save(); g.translate(x, y); g.scale(m.face, 1);
+    o.pack(g, st);
+    g.save(); g.scale(1, 1); img(g, body, -8, -24); g.restore();
+    o.front?.(g, st);
+    g.restore();
+    // close-up
+    c.z.imageSmoothingEnabled = false;
+    c.z.clearRect(0, 0, 36, 36);
+    c.z.drawImage(c.strip, x - 18, y - 34, 36, 36, 0, 0, 36, 36);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -229,6 +229,17 @@ export function sign(x, base, lines, { bg = '#2c7a34', fg = '#fff', post = '#6b4
   lines.forEach((l, i) => pixelText(l, x + (w - textWidth(l)) / 2, base - 10 - h + i * 7 + 1, fg));
 }
 
+// Island Park Pool's slide tower with the big green corkscrew and the Big Blue Slide.
+export function poolSlides(sx) {
+  rect(sx, 34, 24, 74, '#e6e6e6'); for (let y = 40; y < 108; y += 8) rect(sx, y, 24, 1, '#b8bcc4');
+  rect(sx - 2, 30, 28, 4, '#2f7fd6');
+  for (let i = 0; i < 70; i++) {
+    const t = i / 70, x = sx + 30 + Math.sin(t * Math.PI * 5) * 26 + t * 60, y = 40 + t * 62;
+    circle(x, y, 5, i % 7 === 0 ? '#2e8a2e' : '#48c23a');
+  }
+  for (let i = 0; i < 50; i++) { const t = i / 50; circle(sx - 4 - t * 90, 44 + t * 60, 3, '#3a7ae0'); }
+}
+
 // ---------------- trampoline (only drawn after the reveal!) ----------------
 export function trampoline(cx, groundY, w = 84, sink = 0) {
   const top = groundY - 22, rx = w / 2;
