@@ -375,6 +375,7 @@ export class World {
     if (n.walkTo && n.s.walk) img = Math.floor(n.anim) % 2 ? n.s.walk : n.s.idle;
     const bob = n.walkTo ? 0 : Math.round(Math.sin(game.t * 2 + n.x) * 0.6);
     spr(img, n.x - cx - img.width / 2, n.y - img.height + bob, n.face < 0);
+    if (n.s === SPR.mom) glam(n.x - cx, n.y - img.height, n.x);
   }
 
   drawDog(d, cx) {
@@ -528,4 +529,12 @@ export function drawPack(x, y, flip, anim = 0) {
   const ex = flip ? bx + 2 : bx;
   rect(ex - 1, y - 24 + wob, 3, 7, '#2a1f33'); rect(ex, y - 23 + wob, 1, 6, '#f4efe6');
   rect(ex + 2, y - 23, 3, 6, '#2a1f33'); rect(ex + 3, y - 22, 1, 5, '#f4efe6');
+}
+
+// Mom's movie-star twinkle: a little sparkle pops near her hair every couple of seconds.
+export function glam(x, top, seed = 0) {
+  const t = (game.t + seed * 0.013) % 2.2;
+  if (t > 0.5) return;
+  const k = t < 0.15 || t > 0.35 ? 1 : 2, sx = Math.round(x + (Math.floor(game.t / 2.2 + seed) % 2 ? -8 : 7)), sy = Math.round(top + 3);
+  rect(sx - k, sy, k * 2 + 1, 1, '#ffffff'); rect(sx, sy - k, 1, k * 2 + 1, '#ffffff'); rect(sx, sy, 1, 1, '#ff9ec8');
 }

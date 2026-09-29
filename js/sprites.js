@@ -16,6 +16,11 @@ export const PAL = {
   j: '#ffcd3c', J: '#d9921a',
   T: '#e8752a', // calico orange
   K: '#3b3440', // calico dark / tabby
+  M: '#f6d383', // Mom's honey blonde
+  V: '#d9a94f', // blonde shadow
+  Q: '#ff5fa2', // hot pink
+  P: '#ffb3d6', // light pink
+  Z: '#e8336f', // glossy lips
 };
 
 function build(rows, { outline = true, pal = PAL, name = '?' } = {}) {
@@ -143,27 +148,34 @@ const I_LEGS = {
 function isaac(body, legs) { return build([...I_HEAD, ...I_BODY[body], ...I_LEGS[legs]], { name: `isaac-${body}-${legs}` }); }
 
 // ---------------- Mom (Amanda), faces right ----------------
+const MOM_HEAD = [
+  '...QQQ.QQQ....',
+  '..MQkQMQkQM...',
+  '.MMhMMMMMhMM..',
+  'MMhMMMMMMMMMM.',
+  'MMMhsssssssMM.',
+  'MMMsssssssssM.',
+  'MMhsskksskksM.',
+  'MMMSswksswks..',
+  'MhMsspssssps..',
+  'MMMssZZZZss...',
+  'MVMMssZZsss...',
+  'MhMVMsssss....',
+  'MVMM..sss.....',
+];
+const MOM_BINOC = { 5: 'MMMsssGGGGGsM.', 6: 'MMhssGkGGkGG..', 7: 'MMMSsGGGGGGs..' };
+const MOM_BODY = {
+  side: ['MMM.QQQQQQQ...', 'MV.QQQQQQQQQ..', 'Mh.QQPwwPQQQ..', '.M.sQQQwQQQs..', '...sQQQQQQQs..', '...QQQQQQQQ...'],
+  wave: ['MMM.QQQQQQQ.ss', 'MV.QQQQQQQQQs.', 'Mh.QQPwwPQQ...', '.M.sQQQwQQQ...', '...sQQQQQQQ...', '...QQQQQQQQ...'],
+  binoc: ['MMM.QQQQQQQss.', 'MV.QQQQQQQQs..', 'Mh.QQPwwPQQ...', '.M.QQQQwQQQ...', '...QQQQQQQQ...', '...QQQQQQQQ...'],
+};
 const MOM = (legs, arms = 'side') => [
-  '...uuuuuuu....',
-  '..uvuuuuvuu...',
-  '.uuvuuuuuvuu..',
-  '.uuuuuuuuuuuu.',
-  'uuvussssssuuu.',
-  'uuusssssssuu..',
-  'uuusskssksuu..',
-  'uuuSsksskssu..',
-  'uuusspsssps...',
-  'uuussmmmmsu...',
-  '.uuusssssuu...',
-  '.uu..ssss.u...',
-  ...(arms === 'wave'
-    ? ['.....ccc....ss', '...ccccccccsc.', '..ccccccccc...', '..ccccccccc...', '..sccccccc....', '...ccccccc....']
-    : ['...cccccccc...', '..cccccccccc..', '..cccccccccc..', '..cCcccccccC..', '..cCcccccccC..', '..sCcccccccs..']),
-  '...ccccccccc..',
-  '...zzzzzzzz...',
+  ...MOM_HEAD.map((r, i) => (arms === 'binoc' && MOM_BINOC[i]) || r),
+  ...MOM_BODY[arms],
+  '...WWWWWWWW...',
   ...(legs === 'a'
-    ? ['...zzz..zzz...', '..zzz....zzz..', '..zz......zz..', '.xxx......xxx.']
-    : ['...zzz..zzz...', '...zzz..zzz...', '...zz....zz...', '...xxx...xxx..']),
+    ? ['...WWW..WWW...', '..WWW....WWW..', '..WW......WW..', '.QQQ......QQQ.']
+    : ['...WWW..WWW...', '...WWW..WWW...', '...WW....WW...', '...QQQ...QQQ..']),
 ];
 
 // ---------------- Dad (Blaine), faces right ----------------
@@ -339,28 +351,28 @@ const P_ISAAC = [
 const P_MOM = [
   '.......uuuuuuuu........',
   '.....uuvvuuuuuuuu......',
-  '....uuvuuuuuuvvuuuu....',
-  '...uuvuuuuuuuuuvvuuu...',
+  '....uuQQQQQuQQQQQuu....',
+  '...uuvQkkkQQQkkkQuuu...',
   '..uuvuuuuuuuuuuuuvuuu..',
   '..uvuuusssssssssuuvuu..',
   '.uuvuusssssssssssuuvuu.',
   '.uvuusssssssssssssuuvu.',
-  '.uvuusUUUssssUUUssuuvu.',
-  '.uvussskkssssskksssuvu.',
+  '.uvuuskkksssskkkssuuvu.',
+  '.uvuskskkssssskksksuvu.',
   'uuvussskwsssssskwssuvuu',
   'uuvussssssssssssssssuvu',
   'uuvuspppssssssssppppuvu',
   'uuvusppssssSsssssppsuvu',
-  'uuvuusssmmmmmmmmssssuvu',
-  'uuvuussswwwwwwwwsssuuvu',
-  'uuvuuusssmmmmmmsssuuuvu',
+  'uuvuusssZZZZZZZZssssuvu',
+  'uuvuussswwwwwwwwwssuuvu',
+  'uuvuuusssZZZZZZsssuuuvu',
   '.uvuuuusssssssssuuuuvu.',
   '.uuvuuuuusssssssuuuuvu.',
   '.uuvuuuuuuusssuuuuuuvu.',
-  '..uuuuucccsssssccuuuuu.',
-  '..uuuccccccssscccccuuu.',
-  '...cccccccccccccccccc..',
-  '..cccccccccCCcccccccc..',
+  '..uuuuuQQQsssssQQuuuuu.',
+  '..uuuQQQQQQsssQQQQQuuu.',
+  '...QQQQQQQPwwPQQQQQQQ..',
+  '..QQQQQQQQQwPQQQQQQQQ..',
 ];
 const P_DAD = [
   '.......d..dd.d.dd......',
@@ -571,7 +583,7 @@ export function buildSprites() {
       bike: I('fwd', 'sit'), bikeB: I('fwd', 'sitB'), back: I('back', 'stand'), tuck: I('fwd', 'tuck'),
       star: I('up', 'walkA'), hold: I('fwd', 'stand'),
     },
-    mom: { idle: build(MOM('b')), walk: build(MOM('a')), wave: build(MOM('b', 'wave')) },
+    mom: { idle: build(MOM('b')), walk: build(MOM('a')), wave: build(MOM('b', 'wave')), binoc: build(MOM('b', 'binoc')) },
     dad: { idle: build(DAD('b')), walk: build(DAD('a')), pitch: build(DAD('b', 'pitch')), cheer: build(DAD('b', 'up')) },
     sunny: { stand: build(SUNNY.stand), run1: build(SUNNY.run1), run2: build(SUNNY.run2), sit: build(SUNNY.sit) },
     freida: { loaf: build(FREIDA.loaf), walk1: build(FREIDA.walk1), walk2: build(FREIDA.walk2) },
@@ -580,7 +592,7 @@ export function buildSprites() {
     bunny: build(BUNNY), bow: build(PRESENT_BOW), creeper: build(CREEPER), goose: build(GOOSE),
   });
   Object.assign(PORTRAIT, {
-    isaac: build(P_ISAAC, { name: 'p-isaac' }), mom: build(P_MOM, { name: 'p-mom' }), dad: build(P_DAD, { name: 'p-dad' }),
+    isaac: build(P_ISAAC, { name: 'p-isaac' }), mom: build(P_MOM, { name: 'p-mom', pal: { ...PAL, u: '#f6d383', v: '#fff4b5', U: '#b8863a' } }), dad: build(P_DAD, { name: 'p-dad' }),
     sunny: build(P_SUNNY, { name: 'p-sunny' }), freida: build(P_FREIDA, { name: 'p-freida' }),
   });
 }

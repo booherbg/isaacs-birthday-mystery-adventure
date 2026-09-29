@@ -559,7 +559,7 @@ const river = {
   setup(w) {
     w.geese = [640, 1190].map((x) => ({ x, y: w.ground, fly: 0, vx: 0, vy: 0, honked: false }));
     w.fish = [];
-    w.npc('mom', { idle: SPR.mom.idle }, 1566, { face: -1 });
+    w.npc('mom', SPR.mom, 1566, { face: -1, pose: 'binoc' });
     w.npc('fcam', { idle: SPR.freida.loaf }, 1270, { face: -1, y: w.ground - 8 });
     w.triggers.push({ x: 1500, fn: () => fishing(w) });
     startBrook(w);
@@ -643,8 +643,6 @@ const river = {
       rect(mx + 10, w.ground - 6, 8, 6, '#e6e6e6'); rect(mx + 10, w.ground - 6, 8, 1, '#9aa3b8'); // bucket
       rect(mx + 20, w.ground - 5, 10, 5, '#3f9b3a'); rect(mx + 20, w.ground - 5, 10, 1, '#62bf4c'); // tackle box
       rect(mx + 30, w.ground - 30, 1, 30, '#6b4a2f'); rect(mx + 33, w.ground - 28, 1, 28, '#2a1f33'); // two rods
-      const m = w.npcs.mom;
-      if (m && !m.hidden) { rect(m.x - cx - 6, m.y - 27, 3, 3, '#2a1f33'); rect(m.x - cx - 3, m.y - 27, 3, 3, '#2a1f33'); rect(m.x - cx - 5, m.y - 26, 1, 1, '#8fd8ff'); }
     }
   },
   exit() { stopBrook(); },

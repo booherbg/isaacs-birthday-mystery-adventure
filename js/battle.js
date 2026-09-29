@@ -353,8 +353,7 @@ function renderFishing(S) {
   }
   // Mom, bird watching with her binoculars
   G.save(); G.translate(26, 116); G.scale(2, 2);
-  spr(SPR.mom.wave, -7, -30);
-  rect(-2, -26, 3, 2, '#2a1f33'); rect(1, -26, 3, 2, '#2a1f33'); rect(4, -27, 1, 1, '#8fd8ff');
+  spr(SPR.mom.binoc, -7, -26);
   G.restore();
   // Isaac in his fishing hat + vest, rod out over the water
   const mx = 78, my = 118;
