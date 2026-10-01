@@ -3,7 +3,7 @@ import { W, H, G, game, rect, circle, spr, sprRot, setScene, fadeTo, offscreen, 
 import { SPR, PORTRAIT } from './sprites.js';
 import { audio } from './audio.js';
 import { input } from './input.js';
-import { overlay, menu, hud, setPad, toast, closeOverlay, clueBook, btnName } from './ui.js';
+import { overlay, menu, hud, setPad, toast, closeOverlay, clueBook, btnName, dropDialog } from './ui.js';
 import * as A from './art.js';
 import { CONFIG } from './config.js';
 import { save } from './save.js';
@@ -16,6 +16,7 @@ export function titleScene() {
   const S = {
     name: 'title', x: 0, parts: new Particles(), bounce: 0,
     enter() {
+      dropDialog(); // pausing mid-battle and going to the main menu would otherwise leave the dialog bar up
       hud('', '', '');
       setPad('none');
       audio.play(save.data.done ? 'bounce' : 'title');

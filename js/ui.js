@@ -228,6 +228,8 @@ function closeDialog() {
   d?.resolve?.();
 }
 export function hideDialog() { if (dlg) closeDialog(); }
+// Abandon the dialog without resolving it, so the script that opened it can't carry on into a new scene.
+export function dropDialog() { dlg = null; el.dialog.hidden = true; el.choices.innerHTML = ''; }
 
 function updateDialog(dt) {
   if (!dlg) return;
